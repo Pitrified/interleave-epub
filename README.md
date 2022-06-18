@@ -1,2 +1,59 @@
-# interleave-epub
+# Interleave epubs
+
 A tool to interleave the paragraphs of two books in different languages.
+
+Paragraphs in the language you are learning will be shown first,
+followed by the translated paragraph in the language you know.
+
+## TODOs
+
+### Done
+
+## IDEAs
+
+### App structure/flow
+
+* Buttons to change chapter.
+  Dropdown list in the sidebar.
+* Buttons to change `lang_src` sentence.
+* Button to save result.
+  Should this be presented as a download popup?
+  Also in the sidebar.
+
+General flow:
+
+1. Open on route `/` where you drop the two files.
+1. Match the languages of the two files.
+1. Parse the EPubs.
+1. Go to `/align/ch_id`? Or stay on `/`? Probably go to `/align`.
+1. Show similarity plot for fun.
+1. Show alignment plot for fun.
+1. Show table with mismatched sentences, `lang_src, lang_dst, button`.
+   When the button is clicked update the sentence matches.
+
+Handle requests:
+
+1. There is a central method registered on `/` (or whatever page) that handles the requests.
+1. Calls the right method to deal with the input.
+1. That method will update the global (?) variables.
+   And recompute `ooo` obvs.
+1. Another method that prepares lists of sentences to show.
+1. The central controller will call the render template.
+
+### Package structure
+
+* Should we have more than one package? For EPubs, for matching... NO
+
+### Misc
+
+* Button with `form/POST` rather than link? YES
+* Somehow save the aligned states.
+  Maybe after every button click. YES
+* Option in the sidebar to hide/show similarity/alignment plots.
+* Drag and drop is cool but you can also use
+  https://getbootstrap.com/docs/5.2/forms/form-control/#file-input
+* Sample form
+  https://getbootstrap.com/docs/5.2/forms/form-control/#readonly-plain-text
+* A whole bunch of language tag wrangling to load the right models.
+* As the app waits for user input on the first page,
+  start loading the epubs assuming the lang tags are correct.
