@@ -18,16 +18,20 @@ class TranslationPipelineCache:
         self,
         pipe: Optional[TranslationPipeline],
         cache_file_path: Path,
-        lang_orig: str,
-        lang_dest: str,
+        lt_pair: str,
     ):
         """Initialize a cached TranslationPipeline."""
         self.pipe = pipe
         self.cache_file_path = cache_file_path
-        self.lang_orig = lang_orig
-        self.lang_dest = lang_dest
+        self.lt_pair = lt_pair
 
-        if not cache_file_path.exists():
+        # if the cache dir does not exist, create it
+        cache_file_dir = self.cache_file_path.parent
+        if not cache_file_dir.exists():
+            cache_file_dir.mkdir(parents=True)
+
+        # if the cache file does not exist, create empty dict and quit
+        if not self.cache_file_path.exists():
             self.cached_tran = {}
             return
 

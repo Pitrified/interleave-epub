@@ -1,4 +1,5 @@
 """Routes for the flask app."""
+from pprint import pprint
 import zipfile
 from flask import render_template, request
 from interleave_epub.flask_app import app, gs
@@ -23,6 +24,21 @@ def index():
     # tran = gs[pipe_key]("Does the pipeline work for translation tasks?")
     # print(f"translation {tran}")
     return render_template("index.html", title="Home")
+
+
+@app.route("/test_route")
+def test_route():
+    """Test route to test things."""
+    print("Testing start")
+    constants_loader()
+    pipe_loader()
+
+    pprint(gs)
+
+    tran = gs["pipe_cache"]["fr-en"]("Je ne parle pas français.")
+    print(f"translation '{tran}'")
+
+    return "Testing things."
 
 
 @app.route("/load", methods=["GET", "POST"])

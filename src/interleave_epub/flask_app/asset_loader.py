@@ -1,23 +1,54 @@
 """Functions to load heavy assets."""
 from pathlib import Path
+from typing import cast
 from transformers.pipelines import pipeline
+from transformers.pipelines.text2text_generation import TranslationPipeline
 from interleave_epub.flask_app import gs
+from interleave_epub.nlp.cached_pipe import TranslationPipelineCache
 from interleave_epub.nlp.cached_spacy import spacy_load_cached
-from interleave_epub.nlp.utils import SPACY_MODELS_CACHE_DIR
+from interleave_epub.nlp.utils import (
+    SPACY_MODELS_CACHE_DIR,
+    TRANSLATION_PIPELINE_CACHE_DIR,
+)
 
 
-def pipe_loader(lt: str = "en", lt_other: str = "fr"):
+def pipe_loader():
     """Load a pipeline and store it in the session object.
 
     pipeline is a transformers.pipelines.text2text_generation.TranslationPipeline
     """
-    print(f"Loading {lt} {lt_other}")
-    pipe_key = f"pipe_{lt}_{lt_other}"
-    if pipe_key not in gs:
-        print(f"Loading to global state")
-        gs[pipe_key] = pipeline(
-            "translation", model=f"Helsinki-NLP/opus-mt-{lt}-{lt_other}"
+    if "pipe_cache" in gs:
+        return
+
+    # pipe_key = f"pipe_{lt}_{lt_other}"
+    # if pipe_key not in gs:
+    #     print(f"Loading to global state")
+    #     gs[pipe_key] = pipeline(
+    #         "translation", model=f"Helsinki-NLP/opus-mt-{lt}-{lt_other}"
+    #     )
+
+    load_pipeline = gs["load_pipeline"]
+    pipe_cache_paths = gs["pipe_cache_paths"]
+    pipe_model_names = gs["pipe_model_names"]
+
+    # load the pipeline if requested in load_pipeline
+    gs["pipe"] = {
+        lt_pair: cast(
+            TranslationPipeline,
+            pipeline("translation", model=pipe_model_names[lt_pair]),
         )
+        if load_pipeline[lt_pair]
+        else None
+        for lt_pair in gs["lts_pair_h"]
+    }
+
+    # load the cached pipeline
+    gs["pipe_cache"] = {
+        lt_pair: TranslationPipelineCache(
+            gs["pipe"][lt_pair], pipe_cache_paths[lt_pair], lt_pair=lt_pair
+        )
+        for lt_pair in gs["lts_pair_h"]
+    }
 
 
 def spacy_loader():
@@ -49,10 +80,29 @@ def constants_loader():
     # underscore
     gs["lts_pair_u"] = [f"{lt}_{lt_other}" for lt, lt_other in gs["lts_pair_t"]]
     # hyphen
-    gs["lts_pair_h"] = [f"{lt}_{lt_other}" for lt, lt_other in gs["lts_pair_t"]]
+    gs["lts_pair_h"] = [f"{lt}-{lt_other}" for lt, lt_other in gs["lts_pair_t"]]
 
-    # model names
+    # spacy model names
     gs["spacy_model_names"] = {
         "en": "en_core_web_md",
         "fr": "fr_core_news_md",
+    }
+
+    # true to load the translation pipeline
+    # false to hope we have cached some translations
+    # it is mildly insane but Helsinki-NLP use hyphens so we also use hyphens
+    gs["load_pipeline"] = {
+        "en-fr": False,
+        "fr-en": True,
+    }
+
+    # file with cached translations
+    gs["pipe_cache_paths"] = {
+        lt_pair: TRANSLATION_PIPELINE_CACHE_DIR / lt_pair
+        for lt_pair in gs["lts_pair_h"]
+    }
+
+    # huggingface model names
+    gs["pipe_model_names"] = {
+        lt_pair: f"Helsinki-NLP/opus-mt-{lt_pair}" for lt_pair in gs["lts_pair_h"]
     }
