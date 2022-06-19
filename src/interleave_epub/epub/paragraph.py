@@ -33,7 +33,7 @@ class Paragraph:
         self.lang_orig: str = self.chapter.lang_orig
         self.lang_dest: str = self.chapter.lang_dest
 
-        self.lang_tr = f"{self.lang_orig}_{self.lang_dest}"
+        self.lang_tr = f"{self.lang_orig}-{self.lang_dest}"
 
         self.p_tag = p_tag
 

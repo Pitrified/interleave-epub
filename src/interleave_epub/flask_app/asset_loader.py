@@ -19,6 +19,7 @@ def pipe_loader():
     """
     if "pipe_cache" in gs:
         return
+    print("Loading hug")
 
     # pipe_key = f"pipe_{lt}_{lt_other}"
     # if pipe_key not in gs:
@@ -53,6 +54,9 @@ def pipe_loader():
 
 def spacy_loader():
     """Load spacy models from system cache folder."""
+    if "nlp" in gs:
+        return
+    print("Loading spacy")
     lts = gs["lts"]
     spacy_model_names = gs["spacy_model_names"]
     gs["nlp"] = {
@@ -69,6 +73,7 @@ def constants_loader():
 
     # map sd to language tags
     gs["sd_to_lang"] = {"src": "fr", "dst": "en"}
+    gs["lang_to_sd"] = {v: k for k, v in gs["sd_to_lang"].items()}
 
     # src or dst
     gs["sods"] = tuple(gs["sd_to_lang"].keys())
@@ -98,7 +103,7 @@ def constants_loader():
 
     # file with cached translations
     gs["pipe_cache_paths"] = {
-        lt_pair: TRANSLATION_PIPELINE_CACHE_DIR / lt_pair
+        lt_pair: TRANSLATION_PIPELINE_CACHE_DIR / f"{lt_pair}.json"
         for lt_pair in gs["lts_pair_h"]
     }
 
