@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block container_content %}
+<h1>Load epubs</h1>
+
+<div>
+    <h3>Load src file:</h3>
+    <p>Current file: {{ file_names['src'] }}</p>
+    <form method="POST" action="{{ url_for('epub_load') }}" enctype="multipart/form-data">
+        <input type="file" name="file-src" accept=".epub" class="form-control">
+        <input type="submit" value="Submit" class="btn btn-info">
+    </form>
+</div>
+
+<div>
+    <h3>Load dst file:</h3>
+    <p>Current file: {{ file_names['dst'] }}</p>
+    <form method="POST" action="{{ url_for('epub_load') }}" enctype="multipart/form-data">
+        <input type="file" name="file-dst" accept=".epub" class="form-control">
+        <input type="submit" value="Submit" class="btn btn-info">
+    </form>
+</div>
+
+<a href="{{ url_for('epub_align') }}" class="btn btn-info">Align</a>
+
+{% endblock %}

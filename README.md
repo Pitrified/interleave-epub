@@ -11,6 +11,11 @@ followed by the translated paragraph in the language you know.
 
 ## IDEAs
 
+* Global state should not be a boring dict,
+  should be a fancy class with defaults inside,
+  that knows how to get the assets
+  and only calls the loading functions when a key is requested.
+
 ### App structure/flow
 
 * Buttons to change chapter.

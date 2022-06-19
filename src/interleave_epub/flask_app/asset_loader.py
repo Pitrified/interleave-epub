@@ -15,3 +15,16 @@ def pipe_loader(lt: str = "en", lt_other: str = "fr"):
         gs[pipe_key] = pipeline(
             "translation", model=f"Helsinki-NLP/opus-mt-{lt}-{lt_other}"
         )
+
+
+def constants_loader():
+    """Load a bunch of useful constants in the global object."""
+    # if one constant is there, all are there
+    if "sd_to_lang" in gs:
+        return
+
+    # src or dst
+    gs["sods"] = ("src", "dst")
+
+    # map sd to language tags
+    gs["sd_to_lang"] = {"src": "fr", "dst": "en"}
