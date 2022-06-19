@@ -2,7 +2,11 @@
 import zipfile
 from flask import render_template, request
 from interleave_epub.flask_app import app, gs
-from interleave_epub.flask_app.asset_loader import constants_loader, pipe_loader
+from interleave_epub.flask_app.asset_loader import (
+    constants_loader,
+    pipe_loader,
+    spacy_loader,
+)
 from werkzeug.datastructures import FileStorage
 
 
@@ -80,4 +84,8 @@ def epub_load():
 @app.route("/align", methods=["GET", "POST"])
 def epub_align():
     """Align two epubs."""
+    constants_loader()
+    spacy_loader()
+    doc = gs["nlp"][gs["lts"][0]]("Spacy is a fancy model. It can do many things.")
+    print(doc)
     return "Ready to align."

@@ -16,6 +16,9 @@ followed by the translated paragraph in the language you know.
   that knows how to get the assets
   and only calls the loading functions when a key is requested.
 
+  Maybe defaults should be in the `html`?
+  For example the fake file names for 
+
 ### App structure/flow
 
 * Buttons to change chapter.
@@ -62,3 +65,4 @@ Handle requests:
 * A whole bunch of language tag wrangling to load the right models.
 * As the app waits for user input on the first page,
   start loading the epubs assuming the lang tags are correct.
+* Find a way to make `TranslationPipeline` accept batches of sentences.
