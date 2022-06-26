@@ -3,15 +3,25 @@ import io
 from pprint import pprint
 from typing import IO, Optional
 import zipfile
+
 from flask import redirect, render_template, request, url_for
+from matplotlib import pyplot as plt
+from sklearn.metrics.pairwise import cosine_similarity
+
+from interleave_epub.epub.chapter import Chapter
 from interleave_epub.epub.epub import EPub
 from interleave_epub.flask_app import app, gs
 from interleave_epub.flask_app.asset_loader import (
     constants_loader,
+    epub_loader,
     pipe_loader,
+    sent_transformer_loader,
     spacy_loader,
 )
 from werkzeug.datastructures import FileStorage
+from interleave_epub.flask_app.utils import fig2imgb64str
+
+from interleave_epub.nlp.utils import sentence_encode_np
 
 
 @app.route("/")
@@ -89,7 +99,9 @@ def epub_load():
                 # check that the file has a valid name
                 if file_name is None or file_name == "":
                     # return render_template("file_loader.html", file_names=file_names)
-                    # something failed so we exit the loop: the else will catch us
+                    # this is spaghetti of the finest quality
+                    # we break here, don't update the file_names/content,
+                    # place them in globals anyway, render the template
                     break
 
                 # uploaded_file.stream is a SpooledTemporaryFile:
@@ -102,9 +114,12 @@ def epub_load():
                 file_names[sod] = file_name
                 # save the file content
                 file_content[sod] = file_io_stream
+                # we also break here, the else is skipped and we update globals with the new data
                 break
 
         # if no one broke, the else is called
+        # which means that for some reason the form in the request
+        # was not one registered with the key
         else:
             print(f"Else of the for on the forms.")
             return render_template("file_loader.html", file_names=file_names)
@@ -126,18 +141,61 @@ def epub_align():
     spacy_loader()
     pipe_loader()
 
-    if "epub" not in gs:
-        print("Loading epubs for the first time")
-        gs["epub"] = {
-            lt: EPub(
-                gs["file_content"][gs["lang_to_sd"][lt]],
-                gs["nlp"],
-                gs["pipe_cache"],
-                lt,
-                lt_other,
-            )
-            for lt, lt_other in gs["lts_pair_t"]
-        }
-        print("Loading done")
+    sent_transformer_loader()
+    sent_transformer = gs["sent_transformer"]
+    sent_transformer_lt = "en"
 
-    return "Ready to align."
+    # for mild sanity
+    lt_src: str = gs["sd_to_lang"]["src"]
+    lt_dst: str = gs["sd_to_lang"]["dst"]
+    lts: dict[str, str] = gs["lts"]
+
+    epub_loader()
+    epub: dict[str, EPub] = gs["epub"]
+
+    # chapter ids to align, set with some forms in an intermediate page
+    # MAYBE some align_setup
+    chap_id = {lt: 0 for lt in gs["lts"]}
+
+    # get the actual chapter objects
+    chap_selected = {lt: epub[lt].chapters[chap_id[lt]] for lt in lts}
+
+    sent_fr = chap_selected[lt_src].paragraphs[0].sents_orig[0]
+    print(f"{sent_fr.text=}")
+    sent_en = chap_selected[lt_dst].paragraphs[0].sents_tran[0]
+    print(f"{sent_en.text=}")
+
+    # we need an `active_sent_src_id`, can be set by clicking src button
+    # that will be matched to the `dst_id` when clicked dst button
+
+    # all sentences at once
+    # we should bring both to en somehow
+    sents_text_src_orig = []
+    for k, sent in chap_selected[lt_src].enumerate_sents(which_sent="orig"):
+        text_src = sent.text
+        sents_text_src_orig.append(text_src)
+    sents_text_dst_tran = []
+    for k, sent in chap_selected[lt_dst].enumerate_sents(which_sent="tran"):
+        text_dst_tran = sent.text
+        sents_text_dst_tran.append(text_dst_tran)
+
+    # encode them
+    enc_en_orig = sentence_encode_np(
+        sent_transformer[sent_transformer_lt], sents_text_src_orig
+    )
+    enc_fr_tran = sentence_encode_np(
+        sent_transformer[sent_transformer_lt], sents_text_dst_tran
+    )
+
+    # compute the similarity
+    sim = cosine_similarity(enc_en_orig, enc_fr_tran)
+    fig, ax = plt.subplots()
+    ax.imshow(sim)
+    ax.set_title(f"Similarity *en* vs *fr_translated*")
+    ax.set_ylabel("en")
+    ax.set_xlabel("fr_tran")
+    # plt.show()
+    fig_sim = fig2imgb64str(fig)
+    # print(f"{fig_sim=}")
+
+    return render_template("align.html", sim_plot=fig_sim)

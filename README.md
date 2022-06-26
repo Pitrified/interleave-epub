@@ -19,6 +19,9 @@ followed by the translated paragraph in the language you know.
   Maybe defaults should be in the `html`?
   For example the fake file names for 
 
+* We need an `active_sent_src_id`, that can be set by clicking src button,
+  and will be matched to the `dst_id` when clicking dst button.
+
 ### App structure/flow
 
 * Buttons to change chapter.

@@ -3,7 +3,7 @@ from typing import Literal
 
 from bs4 import BeautifulSoup
 from spacy.language import Language
-from spacy.tokens import Span
+from spacy.tokens import Span, Doc
 
 from interleave_epub.epub import epub
 from interleave_epub.epub.paragraph import Paragraph
@@ -52,7 +52,7 @@ class Chapter:
 
         # build the list of Paragraphs
         # self.paragraphs = [Paragraph(p_tag, self.nlp) for p_tag in self.all_p_tag]
-        self.paragraphs = []
+        self.paragraphs: list[Paragraph] = []
         for p_tag in self.all_p_tag[:]:
             self.paragraphs.append(Paragraph(p_tag, self))
 
@@ -102,7 +102,7 @@ class Chapter:
 
     def get_sent_with_parsent_id(
         self, par_id: int, sent_id: int, which_sent=Literal["orig", "tran"]
-    ) -> Span:
+    ) -> Doc | Span:
         """Get the sentence in the chapter indexed as (par_id, sent_id)."""
         if which_sent == "orig":
             return self.paragraphs[par_id].sents_orig[sent_id]
@@ -111,7 +111,7 @@ class Chapter:
 
     def get_sent_with_chapsent_id(
         self, chapsent_id: int, which_sent=Literal["orig", "tran"]
-    ) -> Span:
+    ) -> Doc | Span:
         """Get the sentence in the chapter indexed as the sentence number in the chapter."""
         par_id, sent_id = self.sent_to_parsent[chapsent_id]
         if which_sent == "orig":

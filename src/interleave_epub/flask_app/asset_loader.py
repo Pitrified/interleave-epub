@@ -1,8 +1,12 @@
 """Functions to load heavy assets."""
 from pathlib import Path
 from typing import cast
+
+from sentence_transformers import SentenceTransformer
 from transformers.pipelines import pipeline
 from transformers.pipelines.text2text_generation import TranslationPipeline
+
+from interleave_epub.epub.epub import EPub
 from interleave_epub.flask_app import gs
 from interleave_epub.nlp.cached_pipe import TranslationPipelineCache
 from interleave_epub.nlp.cached_spacy import spacy_load_cached
@@ -65,6 +69,15 @@ def spacy_loader():
     }
 
 
+def sent_transformer_loader():
+    """Load the sentence transformer."""
+    if "sent_transformer" in gs:
+        return
+    gs["sent_transformer"] = {
+        "en": SentenceTransformer(gs["sent_model_names"]["en"], device="cpu")
+    }
+
+
 def constants_loader():
     """Load a bunch of useful constants in the global object."""
     # if one constant is there, all are there
@@ -72,7 +85,7 @@ def constants_loader():
         return
 
     # map sd to language tags
-    gs["sd_to_lang"] = {"src": "fr", "dst": "en"}
+    gs["sd_to_lang"] = {"src": "en", "dst": "fr"}
     gs["lang_to_sd"] = {v: k for k, v in gs["sd_to_lang"].items()}
 
     # src or dst
@@ -110,4 +123,31 @@ def constants_loader():
     # huggingface model names
     gs["pipe_model_names"] = {
         lt_pair: f"Helsinki-NLP/opus-mt-{lt_pair}" for lt_pair in gs["lts_pair_h"]
+    }
+
+    # sentence transformer model names
+    gs["sent_model_names"] = {
+        "en": "sentence-transformers/all-MiniLM-L6-v2",
+    }
+
+
+def epub_loader():
+    """Load the epubs in memory and translate them."""
+    if "epub" in gs:
+        return
+    print("Loading epubs")
+    # this tasty piece of spaghetti converts language tag to src,
+    # as that is the key in the file_content
+    # MAYBE clearly it is better to convert sod in langtag inside load
+    # gs["file_content"][gs["lang_to_sd"][lt]],
+    #                     |-> [ fr -> src ]
+    gs["epub"] = {
+        lt: EPub(
+            gs["file_content"][gs["lang_to_sd"][lt]],
+            gs["nlp"],
+            gs["pipe_cache"],
+            lt,
+            lt_other,
+        )
+        for lt, lt_other in gs["lts_pair_t"]
     }

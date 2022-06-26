@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import IO, Union
 
 from spacy.language import Language
-from interleave_epub.epub.chapter import Chapter
-from interleave_epub.epub.utils import VALID_CHAP_EXT
 
+from interleave_epub.epub import chapter
+from interleave_epub.epub.utils import VALID_CHAP_EXT
 from interleave_epub.nlp.cached_pipe import TranslationPipelineCache
 
 
@@ -50,10 +50,10 @@ class EPub:
         #     Chapter(self.input_zip.read(chap_file_name), chap_file_name, self.nlp)
         #     for chap_file_name in self.chap_file_names
         # ]
-        self.chapters: list[Chapter] = []
+        self.chapters: list["chapter.Chapter"] = []
         for chap_file_name in self.chap_file_names[:6]:
             self.chapters.append(
-                Chapter(
+                chapter.Chapter(
                     self.input_zip.read(chap_file_name),
                     chap_file_name,
                     self,
@@ -142,7 +142,7 @@ class EPub:
             cid[0] for cid in sorted(chap_file_paths_id, key=lambda x: x[1])
         ]
 
-    def get_chapter_by_name(self, chap_file_name: str) -> Chapter:
+    def get_chapter_by_name(self, chap_file_name: str) -> "chapter.Chapter":
         """Get the chapter with the requested name."""
         chap_id = self.chap_file_names.index(chap_file_name)
         print(chap_id)
