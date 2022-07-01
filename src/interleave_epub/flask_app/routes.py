@@ -1,5 +1,7 @@
 """Routes for the flask app."""
 import io
+import json
+from pathlib import Path
 from pprint import pprint
 from typing import IO, Optional
 import zipfile
@@ -7,9 +9,11 @@ import zipfile
 from flask import redirect, render_template, request, url_for
 from matplotlib import pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity
+from werkzeug.datastructures import FileStorage
 
 from interleave_epub.epub.chapter import Chapter
 from interleave_epub.epub.epub import EPub
+from interleave_epub.epub.similarity import match_similarity
 from interleave_epub.flask_app import app, gs
 from interleave_epub.flask_app.asset_loader import (
     constants_loader,
@@ -18,9 +22,7 @@ from interleave_epub.flask_app.asset_loader import (
     sent_transformer_loader,
     spacy_loader,
 )
-from werkzeug.datastructures import FileStorage
 from interleave_epub.flask_app.utils import fig2imgb64str
-
 from interleave_epub.nlp.utils import sentence_encode_np
 
 
@@ -170,14 +172,45 @@ def epub_align():
 
     # all sentences at once
     # we should bring both to en somehow
+
     sents_text_src_orig = []
+    sents_psid_src_orig = []
     for k, sent in chap_selected[lt_src].enumerate_sents(which_sent="orig"):
         text_src = sent.text
         sents_text_src_orig.append(text_src)
+        sents_psid_src_orig.append(k)
+    sents_len_src_orig = [len(d) for d in chap_selected[lt_src].sents_doc_orig]
+
+    sents_text_dst_orig = []
+    sents_psid_dst_orig = []
+    for k, sent in chap_selected[lt_dst].enumerate_sents(which_sent="orig"):
+        text_dst = sent.text
+        sents_text_dst_orig.append(text_dst)
+        sents_psid_dst_orig.append(k)
+    sents_len_dst_orig = [len(d) for d in chap_selected[lt_dst].sents_doc_orig]
     sents_text_dst_tran = []
+    sents_psid_dst_tran = []
     for k, sent in chap_selected[lt_dst].enumerate_sents(which_sent="tran"):
         text_dst_tran = sent.text
         sents_text_dst_tran.append(text_dst_tran)
+        sents_psid_dst_tran.append(k)
+    sents_len_dst_tran = [len(d) for d in chap_selected[lt_dst].sents_doc_tran]
+
+    # dump them for later,
+    # developing is still slow as the app gets reloaded anyway
+    sents_info = {
+        "sents_text_src_orig": sents_text_src_orig,
+        "sents_text_dst_orig": sents_text_dst_orig,
+        "sents_text_dst_tran": sents_text_dst_tran,
+        "sents_psid_src_orig": sents_psid_src_orig,
+        "sents_psid_dst_orig": sents_psid_dst_orig,
+        "sents_psid_dst_tran": sents_psid_dst_tran,
+        "sents_len_src_orig": sents_len_src_orig,
+        "sents_len_dst_orig": sents_len_dst_orig,
+        "sents_len_dst_tran": sents_len_dst_tran,
+    }
+    sents_info_path = Path("sents_info.json")
+    sents_info_path.write_text(json.dumps(sents_info, indent=4))
 
     # encode them
     enc_en_orig = sentence_encode_np(
@@ -195,7 +228,96 @@ def epub_align():
     ax.set_ylabel("en")
     ax.set_xlabel("fr_tran")
     # plt.show()
-    fig_sim = fig2imgb64str(fig)
-    # print(f"{fig_sim=}")
+    sim_fig_str = fig2imgb64str(fig)
+    # print(f"{sim_fig_str=}")
 
-    return render_template("align.html", sim_plot=fig_sim)
+    return render_template("align.html", sim_plot=sim_fig_str)
+
+
+@app.route("/align_cache", methods=["GET", "POST"])
+def epub_align_cache():
+    """Align manually a chapter, but cache the starting point."""
+    # reload the sentences and some info on the ids
+    sents_info_path = Path("sents_info.json")
+    sents_info = json.loads(sents_info_path.read_text())
+    sents_text_src_orig = sents_info["sents_text_src_orig"]
+    sents_psid_src_orig = sents_info["sents_psid_src_orig"]
+    sents_text_dst_orig = sents_info["sents_text_dst_orig"]
+    sents_psid_dst_orig = sents_info["sents_psid_dst_orig"]
+    sents_text_dst_tran = sents_info["sents_text_dst_tran"]
+    sents_psid_dst_tran = sents_info["sents_psid_dst_tran"]
+    sents_len_src_orig = sents_info["sents_len_src_orig"]
+    sents_len_dst_orig = sents_info["sents_len_dst_orig"]
+    sents_len_dst_tran = sents_info["sents_len_dst_tran"]
+
+    # load the sentence transformer
+    constants_loader()
+    sent_transformer_loader()
+    sent_transformer = gs["sent_transformer"]
+    sent_transformer_lt = "en"
+
+    # encode them
+    enc_en_orig = sentence_encode_np(
+        sent_transformer[sent_transformer_lt], sents_text_src_orig
+    )
+    enc_fr_tran = sentence_encode_np(
+        sent_transformer[sent_transformer_lt], sents_text_dst_tran
+    )
+
+    # compute the similarity
+    sim = cosine_similarity(enc_en_orig, enc_fr_tran)
+
+    # plot it for fun
+    fig, ax = plt.subplots()
+    ax.imshow(sim)
+    ax.set_title(f"Similarity *en* vs *fr_translated*")
+    ax.set_ylabel("en")
+    ax.set_xlabel("fr_tran")
+    # plt.show()
+    sim_fig_str = fig2imgb64str(fig)
+    # print(f"{sim_fig_str=}")
+
+    print("Matching sim")
+
+    fig_match, all_i, all_max_flattened = match_similarity(
+        sim, sents_len_src_orig, sents_len_dst_tran
+    )
+    match_fig_str = fig2imgb64str(fig_match)
+
+    is_ooo_flattened = []
+
+    for j, (good_i, good_max_rescaled) in enumerate(zip(all_i, all_max_flattened)):
+
+        # check for out of order ids
+        ooo = False
+
+        if j == 0:
+            # only check to the right for the first value
+            if good_max_rescaled > all_max_flattened[j + 1]:
+                ooo = True
+        elif j == len(all_max_flattened) - 1:
+            # only check to the left for the last value
+            if good_max_rescaled < all_max_flattened[j - 1]:
+                ooo = True
+        else:
+            if (
+                good_max_rescaled > all_max_flattened[j + 1]
+                or good_max_rescaled < all_max_flattened[j - 1]
+            ):
+                ooo = True
+
+        if ooo:
+            print(j, good_i, good_max_rescaled)
+
+        is_ooo_flattened.append(ooo)
+
+    # print("Search ooo")
+    # for j in range(len(is_ooo_flattened)):
+    #     if is_ooo_flattened[j]:
+    #         print(f"{j} is ooo")
+
+    return render_template(
+        "align.html",
+        sim_plot=sim_fig_str,
+        match_plot=match_fig_str,
+    )
