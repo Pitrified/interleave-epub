@@ -1,10 +1,10 @@
 """EPub class."""
 
-import re
-import zipfile
 from collections import Counter
 from pathlib import Path
+import re
 from typing import IO, Union
+import zipfile
 
 from spacy.language import Language
 

@@ -3,7 +3,7 @@ from typing import Literal
 
 from bs4 import BeautifulSoup
 from spacy.language import Language
-from spacy.tokens import Span, Doc
+from spacy.tokens import Doc, Span
 
 from interleave_epub.epub import epub
 from interleave_epub.epub.paragraph import Paragraph

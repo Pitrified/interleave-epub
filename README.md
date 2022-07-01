@@ -69,3 +69,11 @@ Handle requests:
 * As the app waits for user input on the first page,
   start loading the epubs assuming the lang tags are correct.
 * Find a way to make `TranslationPipeline` accept batches of sentences.
+* Chapter align as well,
+  some buttons to begin with,
+  maybe a slider?
+  Then of course you could infer it with similarity `:D`.
+* Global state should not be a boring dict,
+  should be a fancy class with defaults inside,
+  that knows how to get the assets
+  and only calls the loading functions when a key is requested.

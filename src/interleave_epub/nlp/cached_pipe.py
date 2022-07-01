@@ -2,8 +2,6 @@
 
 And by basic I mean a JSON file that gets *completely* rewritten every time.
 """
-
-
 import json
 from pathlib import Path
 from typing import Optional

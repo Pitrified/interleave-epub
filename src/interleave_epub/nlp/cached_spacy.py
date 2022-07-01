@@ -2,7 +2,7 @@
 from pathlib import Path
 
 import spacy
-from  spacy.cli.download import download
+from spacy.cli.download import download
 
 
 def spacy_load_cached(model_path: str, cache_dir: Path) -> spacy.language.Language:
