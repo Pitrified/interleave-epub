@@ -325,19 +325,29 @@ def epub_align_cache(btn=-99, btn2=-90):
     #     if is_ooo_flattened[j]:
     #         print(f"{j} is ooo")
 
+    first_ooo = is_ooo_flattened.index(True)
+    sent_win_len = 5
+
+    # get the mean of neighboring all_max_flattened as possible match for first_ooo (i)
+    # and use that mean as center in the info_zip for french right side sentences ids
+
+    # for ir in range(-winlen, winlen)
+    # en[first_ooo+ir]
+    # fr[mean_max+ir]
+
     info_zip = []
-    for i in range(10):
+    for i in range(first_ooo - sent_win_len, first_ooo + sent_win_len):
         assert all_i[i] == i
         info_zip.append(
             (
                 sents_text_src_orig[i],
                 sents_text_dst_orig[i],
                 i,
-                i-5,
+                i - 5,
             )
         )
 
-    highlight_id = 5
+    highlight_id = first_ooo
     print(f"{all_max_flattened[highlight_id]=}")
 
     return render_template(
