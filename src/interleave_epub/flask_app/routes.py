@@ -235,8 +235,17 @@ def epub_align():
 
 
 @app.route("/align_cache", methods=["GET", "POST"])
-def epub_align_cache():
+@app.route("/align_cache/<signed_int:btn>", methods=["GET", "POST"])
+def epub_align_cache(btn=-99, btn2=-90):
     """Align manually a chapter, but cache the starting point."""
+    # parse POST request
+    if request.method == "POST":
+        print(f"{request=}")
+    if request.method == "GET":
+        print(f"GET {request=}")
+        print(f"GET {request.args=}")
+    print(f"{btn=} {btn2=}")
+
     # reload the sentences and some info on the ids
     sents_info_path = Path("sents_info.json")
     sents_info = json.loads(sents_info_path.read_text())
@@ -316,8 +325,25 @@ def epub_align_cache():
     #     if is_ooo_flattened[j]:
     #         print(f"{j} is ooo")
 
+    info_zip = []
+    for i in range(10):
+        assert all_i[i] == i
+        info_zip.append(
+            (
+                sents_text_src_orig[i],
+                sents_text_dst_orig[i],
+                i,
+                i-5,
+            )
+        )
+
+    highlight_id = 5
+    print(f"{all_max_flattened[highlight_id]=}")
+
     return render_template(
         "align.html",
         sim_plot=sim_fig_str,
         match_plot=match_fig_str,
+        info_zip=info_zip,
+        highlight_id=highlight_id,
     )

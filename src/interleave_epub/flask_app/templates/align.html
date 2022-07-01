@@ -4,4 +4,41 @@
 <h1>Align chapters</h1>
 <img src="{{ sim_plot }}" alt="Similarity plot.">
 <img src="{{ match_plot }}" alt="Matching sent plot.">
+
+<div style="padding: 20px 0 20px 0;">
+    <table class="table table-borderless">
+        <thead>
+            <tr>
+                <th scope="col">English</th>
+                <th scope="col">French</th>
+                <th scope="col" style="text-align: center;">Id</th>
+                <th scope="col" style="text-align: center;">Other</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for info in info_zip %}
+            <tr>
+                {% set is_highlighted = info[2]==highlight_id %}
+                <td {% if is_highlighted %} class="table-primary" {% else %} {% endif %}
+                    style="width: 410px; word-wrap: break-word; text-align: justify;">
+                    <p {% if is_highlighted %} class="lead" {% else %} {% endif %}>
+                        {{ info[0] }}
+                    </p>
+                </td>
+                <td style="width: 410px; word-wrap: break-word; text-align: justify;">{{ info[1] }}</td>
+                <td style="width: 50px;">
+                    <a class="btn btn-info" href="{{ url_for('epub_align_cache', btn=info[2]) }}">
+                        {{ info[2] }}
+                    </a>
+                </td>
+                <td style="width: 50px;">
+                    <a class="btn btn-info" href="{{ url_for('epub_align_cache', btn2=info[3]) }}">
+                        {{ info[3] }}
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
