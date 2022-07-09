@@ -2,8 +2,26 @@
 
 {% block container_content %}
 <h1>Align chapters</h1>
-<img src="{{ sim_plot }}" alt="Similarity plot.">
-<img src="{{ match_plot }}" alt="Matching sent plot.">
+
+<!-- <img src="{{ sim_plot }}" alt="Similarity plot."> -->
+<!-- <img src="{{ match_plot }}" alt="Matching sent plot."> -->
+
+<div>
+    Src:
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move=-10) }}">
+        - 10
+    </a>
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move=10) }}">
+        + 10
+    </a>
+    Dst:
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move=-10) }}">
+        - 10
+    </a>
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move=10) }}">
+        + 10
+    </a>
+</div>
 
 <div style="padding: 20px 0 20px 0;">
     <table class="table table-borderless">
@@ -11,8 +29,9 @@
             <tr>
                 <th scope="col">English</th>
                 <th scope="col">French</th>
-                <th scope="col" style="text-align: center;">Id</th>
-                <th scope="col" style="text-align: center;">Other</th>
+                <th scope="col" style="text-align: center;">SRC</th>
+                <th scope="col" style="text-align: center;">DST</th>
+                <th scope="col" style="text-align: center;">MATCH</th>
             </tr>
         </thead>
         <tbody>
@@ -27,12 +46,12 @@
                 </td>
                 <td style="width: 410px; word-wrap: break-word; text-align: justify;">{{ info[1] }}</td>
                 <td style="width: 50px;">
-                    <a class="btn btn-info" href="{{ url_for('epub_align_cache', btn=info[2]) }}">
+                    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_pick=info[2]) }}">
                         {{ info[2] }}
                     </a>
                 </td>
                 <td style="width: 50px;">
-                    <a class="btn btn-info" href="{{ url_for('epub_align_cache', btn2=info[3]) }}">
+                    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_pick=info[3]) }}">
                         {{ info[3] }}
                     </a>
                 </td>

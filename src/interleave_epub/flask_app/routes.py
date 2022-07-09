@@ -235,22 +235,19 @@ def epub_align():
 
 
 @app.route("/align_cache", methods=["GET", "POST"])
-@app.route("/align_cache/<signed_int:btn>", methods=["GET", "POST"])
+# @app.route("/align_cache/<signed_int:btn>", methods=["GET", "POST"])
 def epub_align_cache(btn=-99, btn2=-90):
     """Align manually a chapter, but cache the starting point."""
     # parse POST request
+    req_arg = {}
     if request.method == "POST":
         print(f"{request=}")
     if request.method == "GET":
         print(f"GET {request=}")
         print(f"GET {request.args=}")
-    print(f"{btn=} {btn2=}")
-
-    # load the sentence transformer
-    constants_loader()
-    sent_transformer_loader()
-    sent_transformer = gs["sent_transformer"]
-    sent_transformer_lt = "en"
+        # flatten the multidict who cares
+        req_arg = {k: request.args[k] for k in request.args}
+    print(f"{req_arg}")
 
     # reload the sentences and some info on the ids
     # this whole thing is actually already inside EPubs, this is just caching
@@ -275,6 +272,12 @@ def epub_align_cache(btn=-99, btn2=-90):
 
     # if it is the first time, compute sim and hopeful matching
     if "all_i" not in gs:
+
+        # load the sentence transformer
+        constants_loader()
+        sent_transformer_loader()
+        sent_transformer = gs["sent_transformer"]
+        sent_transformer_lt = "en"
 
         # encode them
         enc_en_orig = sentence_encode_np(
@@ -318,6 +321,17 @@ def epub_align_cache(btn=-99, btn2=-90):
         match_fig_str = gs["match_fig_str"]
         sim_fig_str = gs["sim_fig_str"]
 
+    if "fixed_src_i_set" not in gs:
+        gs["fixed_src_i_set"] = set()
+
+    # we picked a dst id to match the sentence properly
+    if "dst_pick" in req_arg:
+        print(f"manual match for {gs['curr_i_src']=} {req_arg['dst_pick']=}")
+        # update the matching list
+        all_max_flattened[gs["curr_i_src"]] = int(req_arg["dst_pick"])
+        # add the current sentence to the fixed set
+        gs["fixed_src_i_set"].add(gs["curr_i_src"])
+
     # check for out of order ids
     is_ooo_flattened = []
     for j, (good_i, good_max_rescaled) in enumerate(zip(all_i, all_max_flattened)):
@@ -347,24 +361,32 @@ def epub_align_cache(btn=-99, btn2=-90):
     # FIXME unless you are manually changing the i_src from a button
     # so in the request.args you see new_i_src param
     # FIXME also if you select the correct i_dst this i_src should be skipped
-    curr_i_src = is_ooo_flattened.index(True)
-    mean_max_i_dst = all_max_flattened[curr_i_src]
-    print(f"{curr_i_src=} {all_max_flattened[curr_i_src]=}")
+    for fixed_src_i in gs["fixed_src_i_set"]:
+        print(f"skipping {fixed_src_i=}")
+        is_ooo_flattened[fixed_src_i] = False
+    if True in is_ooo_flattened:
+        curr_i_src = is_ooo_flattened.index(True)
+        gs["curr_i_src"] = curr_i_src
+    else:
+        curr_i_src = 0
+        print(f"Finished aligning")
+        # might want to save the thing and move on to the next chapter
 
+    # the best match we have for now
     # get the mean of neighboring all_max_flattened as possible match for curr_i_src (i)
     # and use that mean as center in the info_zip for french right side sentences ids
+    mean_max_i_dst = all_max_flattened[curr_i_src]
 
-    # for ir in range(-winlen, winlen)
-    # en[curr_i_src+ir]
-    # fr[mean_max+ir]
+    print(f"{curr_i_src=} {all_max_flattened[curr_i_src]=}")
 
     # build zipped infos for visualization
     info_zip = []
-    # for i_src in range(curr_i_src - sent_win_len, curr_i_src + sent_win_len):
     for i in range(-sent_win_len, sent_win_len):
         i_src = curr_i_src + i
         i_dst = mean_max_i_dst + i
-        assert all_i[i_src] == i_src
+        # print(f"{all_i[i_src]=} {i_src=}") assert all_i[i_src] == i_src
+        # FIXME this getitem should be made safe, can't access -5
+        # I mean it works, it just looks silly
         info_zip.append(
             (
                 sents_text_src_orig[i_src],

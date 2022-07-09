@@ -22,6 +22,10 @@ followed by the translated paragraph in the language you know.
 * We need an `active_sent_src_id`, that can be set by clicking src button,
   and will be matched to the `dst_id` when clicking dst button.
 
+* Should run the whole thing in auto at first,
+  telling how many mismatch there are per chapter,
+  and offering to fix the worst ones.
+
 ### App structure/flow
 
 * Buttons to change chapter.
