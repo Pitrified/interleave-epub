@@ -246,9 +246,23 @@ def epub_align_cache(btn=-99, btn2=-90):
         print(f"GET {request.args=}")
     print(f"{btn=} {btn2=}")
 
+    # load the sentence transformer
+    constants_loader()
+    sent_transformer_loader()
+    sent_transformer = gs["sent_transformer"]
+    sent_transformer_lt = "en"
+
     # reload the sentences and some info on the ids
-    sents_info_path = Path("sents_info.json")
-    sents_info = json.loads(sents_info_path.read_text())
+    # this whole thing is actually already inside EPubs, this is just caching
+    # if it is the first time loading the cache
+    if "sents_info" not in gs:
+        sents_info_path = Path("sents_info.json")
+        sents_info = json.loads(sents_info_path.read_text())
+        gs["sents_info"] = sents_info
+    # or just extract it from the global state (barf)
+    else:
+        sents_info = gs["sents_info"]
+
     sents_text_src_orig = sents_info["sents_text_src_orig"]
     sents_psid_src_orig = sents_info["sents_psid_src_orig"]
     sents_text_dst_orig = sents_info["sents_text_dst_orig"]
@@ -259,47 +273,55 @@ def epub_align_cache(btn=-99, btn2=-90):
     sents_len_dst_orig = sents_info["sents_len_dst_orig"]
     sents_len_dst_tran = sents_info["sents_len_dst_tran"]
 
-    # load the sentence transformer
-    constants_loader()
-    sent_transformer_loader()
-    sent_transformer = gs["sent_transformer"]
-    sent_transformer_lt = "en"
+    # if it is the first time, compute sim and hopeful matching
+    if "all_i" not in gs:
 
-    # encode them
-    enc_en_orig = sentence_encode_np(
-        sent_transformer[sent_transformer_lt], sents_text_src_orig
-    )
-    enc_fr_tran = sentence_encode_np(
-        sent_transformer[sent_transformer_lt], sents_text_dst_tran
-    )
+        # encode them
+        enc_en_orig = sentence_encode_np(
+            sent_transformer[sent_transformer_lt], sents_text_src_orig
+        )
+        enc_fr_tran = sentence_encode_np(
+            sent_transformer[sent_transformer_lt], sents_text_dst_tran
+        )
 
-    # compute the similarity
-    sim = cosine_similarity(enc_en_orig, enc_fr_tran)
+        # compute the similarity
+        sim = cosine_similarity(enc_en_orig, enc_fr_tran)
 
-    # plot it for fun
-    fig, ax = plt.subplots()
-    ax.imshow(sim)
-    ax.set_title(f"Similarity *en* vs *fr_translated*")
-    ax.set_ylabel("en")
-    ax.set_xlabel("fr_tran")
-    # plt.show()
-    sim_fig_str = fig2imgb64str(fig)
-    # print(f"{sim_fig_str=}")
+        # plot it for fun
+        fig, ax = plt.subplots()
+        ax.imshow(sim)
+        ax.set_title(f"Similarity *en* vs *fr_translated*")
+        ax.set_ylabel("en")
+        ax.set_xlabel("fr_tran")
+        # plt.show()
+        sim_fig_str = fig2imgb64str(fig)
+        # print(f"{sim_fig_str=}")
 
-    print("Matching sim")
+        print("Matching sim")
 
-    fig_match, all_i, all_max_flattened = match_similarity(
-        sim, sents_len_src_orig, sents_len_dst_tran
-    )
-    match_fig_str = fig2imgb64str(fig_match)
+        fig_match, all_i, all_max_flattened = match_similarity(
+            sim, sents_len_src_orig, sents_len_dst_tran
+        )
+        match_fig_str = fig2imgb64str(fig_match)
 
+        # save it for later wtf I hate everything
+        gs["all_i"] = all_i
+        gs["all_max_flattened"] = all_max_flattened
+        gs["match_fig_str"] = match_fig_str
+        gs["sim_fig_str"] = sim_fig_str
+
+    else:
+        # the point is that all_max_flattened will actually change
+        print(f"reloading matching")
+        all_i = gs["all_i"]
+        all_max_flattened = gs["all_max_flattened"]
+        match_fig_str = gs["match_fig_str"]
+        sim_fig_str = gs["sim_fig_str"]
+
+    # check for out of order ids
     is_ooo_flattened = []
-
     for j, (good_i, good_max_rescaled) in enumerate(zip(all_i, all_max_flattened)):
-
-        # check for out of order ids
         ooo = False
-
         if j == 0:
             # only check to the right for the first value
             if good_max_rescaled > all_max_flattened[j + 1]:
@@ -314,46 +336,49 @@ def epub_align_cache(btn=-99, btn2=-90):
                 or good_max_rescaled < all_max_flattened[j - 1]
             ):
                 ooo = True
-
         if ooo:
             print(j, good_i, good_max_rescaled)
-
         is_ooo_flattened.append(ooo)
 
-    # print("Search ooo")
-    # for j in range(len(is_ooo_flattened)):
-    #     if is_ooo_flattened[j]:
-    #         print(f"{j} is ooo")
-
-    first_ooo = is_ooo_flattened.index(True)
+    # random constant that will be put somewhere
     sent_win_len = 5
 
-    # get the mean of neighboring all_max_flattened as possible match for first_ooo (i)
+    # the current sent we are fixing for src
+    # FIXME unless you are manually changing the i_src from a button
+    # so in the request.args you see new_i_src param
+    # FIXME also if you select the correct i_dst this i_src should be skipped
+    curr_i_src = is_ooo_flattened.index(True)
+    mean_max_i_dst = all_max_flattened[curr_i_src]
+    print(f"{curr_i_src=} {all_max_flattened[curr_i_src]=}")
+
+    # get the mean of neighboring all_max_flattened as possible match for curr_i_src (i)
     # and use that mean as center in the info_zip for french right side sentences ids
 
     # for ir in range(-winlen, winlen)
-    # en[first_ooo+ir]
+    # en[curr_i_src+ir]
     # fr[mean_max+ir]
 
+    # build zipped infos for visualization
     info_zip = []
-    for i in range(first_ooo - sent_win_len, first_ooo + sent_win_len):
-        assert all_i[i] == i
+    # for i_src in range(curr_i_src - sent_win_len, curr_i_src + sent_win_len):
+    for i in range(-sent_win_len, sent_win_len):
+        i_src = curr_i_src + i
+        i_dst = mean_max_i_dst + i
+        assert all_i[i_src] == i_src
         info_zip.append(
             (
-                sents_text_src_orig[i],
-                sents_text_dst_orig[i],
-                i,
-                i - 5,
+                sents_text_src_orig[i_src],
+                sents_text_dst_orig[i_dst],
+                i_src,
+                i_dst,
+                all_max_flattened[i_src],
             )
         )
-
-    highlight_id = first_ooo
-    print(f"{all_max_flattened[highlight_id]=}")
 
     return render_template(
         "align.html",
         sim_plot=sim_fig_str,
         match_plot=match_fig_str,
         info_zip=info_zip,
-        highlight_id=highlight_id,
+        curr_i_src=curr_i_src,
     )

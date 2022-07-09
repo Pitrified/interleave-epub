@@ -18,7 +18,7 @@
         <tbody>
             {% for info in info_zip %}
             <tr>
-                {% set is_highlighted = info[2]==highlight_id %}
+                {% set is_highlighted = info[2]==curr_i_src %}
                 <td {% if is_highlighted %} class="table-primary" {% else %} {% endif %}
                     style="width: 410px; word-wrap: break-word; text-align: justify;">
                     <p {% if is_highlighted %} class="lead" {% else %} {% endif %}>
@@ -35,6 +35,9 @@
                     <a class="btn btn-info" href="{{ url_for('epub_align_cache', btn2=info[3]) }}">
                         {{ info[3] }}
                     </a>
+                </td>
+                <td style="width: 50px;">
+                    {{ info[4] }}
                 </td>
             </tr>
             {% endfor %}

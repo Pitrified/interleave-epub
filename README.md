@@ -31,7 +31,7 @@ followed by the translated paragraph in the language you know.
   Should this be presented as a download popup?
   Also in the sidebar.
 
-General flow:
+#### General flow:
 
 1. Open on route `/` where you drop the two files.
 1. Match the languages of the two files.
@@ -42,7 +42,7 @@ General flow:
 1. Show table with mismatched sentences, `lang_src, lang_dst, button`.
    When the button is clicked update the sentence matches.
 
-Handle requests:
+#### Handle requests:
 
 1. There is a central method registered on `/` (or whatever page) that handles the requests.
 1. Calls the right method to deal with the input.
@@ -50,6 +50,20 @@ Handle requests:
    And recompute `ooo` obvs.
 1. Another method that prepares lists of sentences to show.
 1. The central controller will call the render template.
+
+#### Manually fix alignment
+
+1. Find the first ooo
+1. Find the best match for dst:
+   need to interpolate neightbors, the actual match is wrong lmao
+1. Show sents for both sides,
+   with buttons to adjust `current_ooo` and `hopeful_match`
+1. Also buttons to wildly change `current_ooo` and `hopeful_match`, `+-10`
+1. Button to confirm and save
+
+Use a getter to safely extract data from lists.
+
+`[dst_id for dst_id in flattened_matches if dst_id != current_ooo_i]`
 
 ### Package structure
 
