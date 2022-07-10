@@ -8,6 +8,8 @@ import zipfile
 
 from flask import redirect, render_template, request, url_for
 from matplotlib import pyplot as plt
+import numpy as np
+import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from werkzeug.datastructures import FileStorage
 
@@ -158,8 +160,13 @@ def epub_align():
 
     # chapter ids to align, set with some forms in an intermediate page
     # MAYBE some align_setup
-    chap_id = {lt: 1 for lt in gs["lts"]}
-    chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
+    # chap_id = {lt: 1 for lt in gs["lts"]}
+    # chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
+    chap_id_start = {lt: 0 for lt in gs["lts"]}
+    gs["chap_id_start"] = chap_id_start
+    # then we add delta
+    chap_curr_delta = 0
+    chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
 
     # get the actual chapter objects
     chap_selected = {lt: epub[lt].chapters[chap_id[lt]] for lt in lts}
@@ -212,7 +219,7 @@ def epub_align():
         "sents_len_dst_orig": sents_len_dst_orig,
         "sents_len_dst_tran": sents_len_dst_tran,
     }
-    sents_info_path = Path(f"sents_info_{chap_id_str}.json")
+    sents_info_path = Path(f"sents_info_{chap_curr_delta}.json")
     sents_info_path.write_text(json.dumps(sents_info, indent=4))
 
     # encode them
@@ -258,14 +265,20 @@ def epub_align_cache(btn=-99, btn2=-90):
     cache_fol_loader()
 
     # indexes of the chapters
-    chap_id = {lt: 1 for lt in gs["lts"]}
-    chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
+    # somewhere someone found this values
+    # that is, the index of the first real chap we need to analyze
+    chap_id_start = {lt: 0 for lt in gs["lts"]}
+    gs["chap_id_start"] = chap_id_start
+    # then we add delta
+    chap_curr_delta = 1
+    chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
+    # chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
 
     # reload the sentences and some info on the ids
     # this whole thing is actually already inside EPubs, this is just caching
     # if it is the first time loading the cache
     if "sents_info" not in gs:
-        sents_info_path = Path(f"sents_info_{chap_id_str}.json")
+        sents_info_path = Path(f"sents_info_{chap_curr_delta}.json")
         sents_info = json.loads(sents_info_path.read_text())
         gs["sents_info"] = sents_info
     # or just extract it from the global state (barf)
@@ -283,7 +296,7 @@ def epub_align_cache(btn=-99, btn2=-90):
     sents_len_dst_tran = sents_info["sents_len_dst_tran"]
 
     # match info cache location
-    match_info_path = gs["cache_fol"] / f"match_info_{chap_id_str}.json"
+    match_info_path = gs["cache_fol"] / f"match_info_{chap_curr_delta}.json"
 
     # button to ignore cache was pressed
     if "ignore_cached_match" in req_arg and req_arg["ignore_cached_match"] == "True":
@@ -390,7 +403,11 @@ def epub_align_cache(btn=-99, btn2=-90):
         is_ooo_flattened.append(ooo)
 
     # random constant that will be put somewhere
-    sent_win_len = 5
+    sent_win_len = 10
+
+    amf_series = pd.Series(all_max_flattened)
+    amf_series[is_ooo_flattened] = np.nan
+    amf_series.interpolate(inplace=True)
 
     # the current sent we are fixing for src
     # FIXME unless you are manually changing the i_src from a button
@@ -410,9 +427,32 @@ def epub_align_cache(btn=-99, btn2=-90):
     # the best match we have for now
     # get the mean of neighboring all_max_flattened as possible match for curr_i_src (i)
     # and use that mean as center in the info_zip for french right side sentences ids
-    mean_max_i_dst = all_max_flattened[curr_i_src]
+    # mean_max_i_dst = all_max_flattened[curr_i_src]
 
-    print(f"{curr_i_src=} {all_max_flattened[curr_i_src]=}")
+    # if we know it, we might want to change it
+    if "mean_max_i_dst" in gs and "dst_move" in req_arg:
+        print(f"{req_arg['dst_move']=}")
+        if req_arg["dst_move"] == "back":
+            gs["mean_max_i_dst"] -= sent_win_len
+            print(f"back mean max to {gs['mean_max_i_dst']}")
+            if gs["mean_max_i_dst"] < 0:
+                gs["mean_max_i_dst"] = 0
+        elif req_arg["dst_move"] == "forward":
+            gs["mean_max_i_dst"] += sent_win_len
+            print(f"forw mean max to {gs['mean_max_i_dst']}")
+            # this is actually num sent dst, we might have it saner in the Chapter object
+            if gs["mean_max_i_dst"] > len(sents_text_dst_orig):
+                gs["mean_max_i_dst"] = len(sents_text_dst_orig)
+                print(f"limiting mean max to {gs['mean_max_i_dst']}")
+    else:
+        # if we never saw this (the first time) compute it
+        gs["mean_max_i_dst"] = int(amf_series[curr_i_src])
+
+    mean_max_i_dst = gs["mean_max_i_dst"]
+
+    # mean_max_i_dst = int(amf_series[curr_i_src])
+
+    print(f"{curr_i_src=} {all_max_flattened[curr_i_src]=} {amf_series[curr_i_src]=}")
 
     # build zipped infos for visualization
     info_zip = []
@@ -421,7 +461,7 @@ def epub_align_cache(btn=-99, btn2=-90):
         i_dst = mean_max_i_dst + i
         # print(f"{all_i[i_src]=} {i_src=}") assert all_i[i_src] == i_src
         # FIXME this getitem should be made safe, can't access -5
-        # I mean it works, it just looks silly
+        # and it crashes on i>len(sents)
         info_zip.append(
             (
                 sents_text_src_orig[i_src],

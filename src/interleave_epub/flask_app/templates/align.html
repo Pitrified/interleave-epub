@@ -8,18 +8,18 @@
 
 <div>
     Src:
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move=-10) }}">
-        - 10
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move=back) }}">
+        Back
     </a>
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move=10) }}">
-        + 10
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move=forward) }}">
+        Forward
     </a>
     Dst:
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move=-10) }}">
-        - 10
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move='back') }}">
+        Back
     </a>
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move=10) }}">
-        + 10
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move='forward') }}">
+        Forward
     </a>
     <a class="btn btn-info" href="{{ url_for('epub_align_cache', ignore_cached_match=True) }}">
         Ignore cached match

@@ -21,6 +21,7 @@ isort = "^5.10.1"
 sentence-transformers = "^2.2.1"
 matplotlib = "^3.5.2"
 mypy = "^0.961"
+pandas = "^1.4.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
