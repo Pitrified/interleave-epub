@@ -135,7 +135,7 @@ def match_similarity(
 
         # save all matches i-max
         all_i.append(i)
-        all_max_flattened.append(last_max)
+        all_max_flattened.append(int(last_max))
 
     fig, ax = plt.subplots()
     ax.scatter(all_good_i, all_good_max, s=0.1)

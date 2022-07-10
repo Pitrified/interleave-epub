@@ -151,3 +151,22 @@ def epub_loader():
         )
         for lt, lt_other in gs["lts_pair_t"]
     }
+
+
+def cache_fol_loader():
+    """Create the cache folder."""
+    if "cache_fol" in gs:
+        return
+    print("Creating cache folder.")
+
+    this_file_fol = Path(__file__).absolute().parent
+    print(f"{this_file_fol=}")
+
+    package_root_fol = this_file_fol.parent.parent.parent
+    print(f"{package_root_fol=}")
+
+    cache_fol = package_root_fol / "cache"
+    print(f"{cache_fol=}")
+    if not cache_fol.exists():
+        cache_fol.mkdir()
+    gs["cache_fol"] = cache_fol

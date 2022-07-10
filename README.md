@@ -5,6 +5,22 @@ A tool to interleave the paragraphs of two books in different languages.
 Paragraphs in the language you are learning will be shown first,
 followed by the translated paragraph in the language you know.
 
+## Develop
+
+Run it from inside the folder
+
+```bash
+interleave-epub/src/interleave_epub
+```
+
+with
+
+```bash
+python flask_app/livereload_app.py 
+```
+
+to prevent the livereload to see the cache write as a change.
+
 ## TODOs
 
 ### Done

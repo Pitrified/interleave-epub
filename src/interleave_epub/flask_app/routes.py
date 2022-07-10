@@ -16,6 +16,7 @@ from interleave_epub.epub.epub import EPub
 from interleave_epub.epub.similarity import match_similarity
 from interleave_epub.flask_app import app, gs
 from interleave_epub.flask_app.asset_loader import (
+    cache_fol_loader,
     constants_loader,
     epub_loader,
     pipe_loader,
@@ -157,7 +158,8 @@ def epub_align():
 
     # chapter ids to align, set with some forms in an intermediate page
     # MAYBE some align_setup
-    chap_id = {lt: 0 for lt in gs["lts"]}
+    chap_id = {lt: 1 for lt in gs["lts"]}
+    chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
 
     # get the actual chapter objects
     chap_selected = {lt: epub[lt].chapters[chap_id[lt]] for lt in lts}
@@ -173,6 +175,7 @@ def epub_align():
     # all sentences at once
     # we should bring both to en somehow
 
+    # FIXME a whole bunch of this is already inside the EPub object
     sents_text_src_orig = []
     sents_psid_src_orig = []
     for k, sent in chap_selected[lt_src].enumerate_sents(which_sent="orig"):
@@ -209,7 +212,7 @@ def epub_align():
         "sents_len_dst_orig": sents_len_dst_orig,
         "sents_len_dst_tran": sents_len_dst_tran,
     }
-    sents_info_path = Path("sents_info.json")
+    sents_info_path = Path(f"sents_info_{chap_id_str}.json")
     sents_info_path.write_text(json.dumps(sents_info, indent=4))
 
     # encode them
@@ -238,6 +241,7 @@ def epub_align():
 # @app.route("/align_cache/<signed_int:btn>", methods=["GET", "POST"])
 def epub_align_cache(btn=-99, btn2=-90):
     """Align manually a chapter, but cache the starting point."""
+    print(f"\n----- align_cache -----")
     # parse POST request
     req_arg = {}
     if request.method == "POST":
@@ -249,11 +253,19 @@ def epub_align_cache(btn=-99, btn2=-90):
         req_arg = {k: request.args[k] for k in request.args}
     print(f"{req_arg}")
 
+    constants_loader()
+
+    cache_fol_loader()
+
+    # indexes of the chapters
+    chap_id = {lt: 1 for lt in gs["lts"]}
+    chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
+
     # reload the sentences and some info on the ids
     # this whole thing is actually already inside EPubs, this is just caching
     # if it is the first time loading the cache
     if "sents_info" not in gs:
-        sents_info_path = Path("sents_info.json")
+        sents_info_path = Path(f"sents_info_{chap_id_str}.json")
         sents_info = json.loads(sents_info_path.read_text())
         gs["sents_info"] = sents_info
     # or just extract it from the global state (barf)
@@ -270,52 +282,73 @@ def epub_align_cache(btn=-99, btn2=-90):
     sents_len_dst_orig = sents_info["sents_len_dst_orig"]
     sents_len_dst_tran = sents_info["sents_len_dst_tran"]
 
-    # if it is the first time, compute sim and hopeful matching
-    if "all_i" not in gs:
+    # match info cache location
+    match_info_path = gs["cache_fol"] / f"match_info_{chap_id_str}.json"
 
-        # load the sentence transformer
-        constants_loader()
-        sent_transformer_loader()
-        sent_transformer = gs["sent_transformer"]
-        sent_transformer_lt = "en"
+    # button to ignore cache was pressed
+    if "ignore_cached_match" in req_arg and req_arg["ignore_cached_match"] == "True":
+        ignore_cached_match = True
+        print(f"{ignore_cached_match=}")
+    else:
+        ignore_cached_match = False
+        print(f"{ignore_cached_match=}")
 
-        # encode them
-        enc_en_orig = sentence_encode_np(
-            sent_transformer[sent_transformer_lt], sents_text_src_orig
-        )
-        enc_fr_tran = sentence_encode_np(
-            sent_transformer[sent_transformer_lt], sents_text_dst_tran
-        )
+    # if it is the first time or we want to ignore the cached data and restart
+    # compute sim and hopeful matching
+    if "all_i" not in gs or ignore_cached_match:
 
-        # compute the similarity
-        sim = cosine_similarity(enc_en_orig, enc_fr_tran)
+        if match_info_path.exists() and not ignore_cached_match:
+            # load the cached matches
+            print(f"found match info at {match_info_path}")
+            match_info = json.loads(match_info_path.read_text())
+            all_i = match_info["all_i"]
+            all_max_flattened = match_info["all_max_flattened"]
+            match_fig_str = match_info["match_fig_str"]
+            sim_fig_str = match_info["sim_fig_str"]
 
-        # plot it for fun
-        fig, ax = plt.subplots()
-        ax.imshow(sim)
-        ax.set_title(f"Similarity *en* vs *fr_translated*")
-        ax.set_ylabel("en")
-        ax.set_xlabel("fr_tran")
-        # plt.show()
-        sim_fig_str = fig2imgb64str(fig)
-        # print(f"{sim_fig_str=}")
+        else:
+            # load the sentence transformer
+            sent_transformer_loader()
+            sent_transformer = gs["sent_transformer"]
+            sent_transformer_lt = "en"
 
-        print("Matching sim")
+            # encode them
+            enc_en_orig = sentence_encode_np(
+                sent_transformer[sent_transformer_lt], sents_text_src_orig
+            )
+            enc_fr_tran = sentence_encode_np(
+                sent_transformer[sent_transformer_lt], sents_text_dst_tran
+            )
 
-        fig_match, all_i, all_max_flattened = match_similarity(
-            sim, sents_len_src_orig, sents_len_dst_tran
-        )
-        match_fig_str = fig2imgb64str(fig_match)
+            # compute the similarity
+            sim = cosine_similarity(enc_en_orig, enc_fr_tran)
 
-        # save it for later wtf I hate everything
-        gs["all_i"] = all_i
-        gs["all_max_flattened"] = all_max_flattened
-        gs["match_fig_str"] = match_fig_str
-        gs["sim_fig_str"] = sim_fig_str
+            # plot it for fun
+            fig, ax = plt.subplots()
+            ax.imshow(sim)
+            ax.set_title(f"Similarity *en* vs *fr_translated*")
+            ax.set_ylabel("en")
+            ax.set_xlabel("fr_tran")
+            # plt.show()
+            sim_fig_str = fig2imgb64str(fig)
+            # print(f"{sim_fig_str=}")
+
+            print("Matching sim")
+
+            fig_match, all_i, all_max_flattened = match_similarity(
+                sim, sents_len_src_orig, sents_len_dst_tran
+            )
+            match_fig_str = fig2imgb64str(fig_match)
+
+            # save it for later wtf I hate everything
+            gs["all_i"] = all_i
+            gs["all_max_flattened"] = all_max_flattened
+            gs["match_fig_str"] = match_fig_str
+            gs["sim_fig_str"] = sim_fig_str
 
     else:
         # the point is that all_max_flattened will actually change
-        print(f"reloading matching")
+        print(f"reloading matching from global state")
         all_i = gs["all_i"]
         all_max_flattened = gs["all_max_flattened"]
         match_fig_str = gs["match_fig_str"]
@@ -326,11 +359,13 @@ def epub_align_cache(btn=-99, btn2=-90):
 
     # we picked a dst id to match the sentence properly
     if "dst_pick" in req_arg:
-        print(f"manual match for {gs['curr_i_src']=} {req_arg['dst_pick']=}")
-        # update the matching list
-        all_max_flattened[gs["curr_i_src"]] = int(req_arg["dst_pick"])
-        # add the current sentence to the fixed set
-        gs["fixed_src_i_set"].add(gs["curr_i_src"])
+        # check we actually know what index to match it to
+        if "curr_i_src" in gs:
+            print(f"manual match for {gs['curr_i_src']=} {req_arg['dst_pick']=}")
+            # update the matching list
+            all_max_flattened[gs["curr_i_src"]] = int(req_arg["dst_pick"])
+            # add the current sentence to the fixed set
+            gs["fixed_src_i_set"].add(gs["curr_i_src"])
 
     # check for out of order ids
     is_ooo_flattened = []
@@ -396,6 +431,15 @@ def epub_align_cache(btn=-99, btn2=-90):
                 all_max_flattened[i_src],
             )
         )
+
+    match_info = {
+        "all_i": all_i,
+        "all_max_flattened": all_max_flattened,
+        "match_fig_str": match_fig_str,
+        "sim_fig_str": sim_fig_str,
+    }
+    match_info_path.write_text(json.dumps(match_info, indent=4))
+    print(f"saved in {match_info_path}")
 
     return render_template(
         "align.html",

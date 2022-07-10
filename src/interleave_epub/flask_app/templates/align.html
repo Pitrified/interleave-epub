@@ -21,6 +21,15 @@
     <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move=10) }}">
         + 10
     </a>
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', ignore_cached_match=True) }}">
+        Ignore cached match
+    </a>
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', next_chapter=True) }}">
+        Next chapter
+    </a>
+    <a class="btn btn-info" href="{{ url_for('epub_align_cache', save_epub=True) }}">
+        Save EPub
+    </a>
 </div>
 
 <div style="padding: 20px 0 20px 0;">
