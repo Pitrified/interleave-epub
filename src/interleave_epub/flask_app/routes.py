@@ -27,7 +27,7 @@ from interleave_epub.flask_app.asset_loader import (
 )
 from interleave_epub.flask_app.utils import fig2imgb64str
 from interleave_epub.nlp.utils import sentence_encode_np
-from interleave_epub.utils import validate_index
+from interleave_epub.utils import is_index_valid, validate_index
 
 
 @app.route("/")
@@ -422,7 +422,7 @@ def epub_align_cache(btn=-99, btn2=-90):
     ###################################################################
     # the current sent we are fixing for src
 
-    # manually change the i_src from a button
+    # manually change the src_i from a button
     # so in the request.args you see new_i_src param
     # the mean_max_i_dst will be updated accordingly
     if "curr_i_src" in gs and "src_move" in req_arg:
@@ -434,7 +434,7 @@ def epub_align_cache(btn=-99, btn2=-90):
 
     # compute it from the ooo list
     else:
-        # if you already selected the correct i_dst for this i_src it should be skipped
+        # if you already selected the correct dst_i for this src_i it should be skipped
         for fixed_src_i in gs["fixed_src_i_set"]:
             print(f"skipping {fixed_src_i=}")
             is_ooo_flattened[fixed_src_i] = False
@@ -469,18 +469,39 @@ def epub_align_cache(btn=-99, btn2=-90):
     ###################################################################
     # build zipped infos for visualization
     info_zip = []
+    empty_tag = "-"
     for i in range(-sent_win_len, sent_win_len):
-        i_src = gs["curr_i_src"] + i
-        i_dst = gs["mean_max_i_dst"] + i
-        # FIXME this getitem should be made safe, can't access -5
-        # and it crashes on i>len(sents)
+
+        # src sent
+        src_i = gs["curr_i_src"] + i
+        if is_index_valid(src_i, sents_text_src_orig):
+            print(f"validating {src_i=} {len(sents_text_src_orig)=}")
+            sent_src = sents_text_src_orig[src_i]
+            original_guess_dst_i = all_max_flattened[src_i]
+        else:
+            sent_src = empty_tag
+            src_i = empty_tag
+            original_guess_dst_i = empty_tag
+
+        # dst sent
+        dst_i = gs["mean_max_i_dst"] + i
+        if is_index_valid(dst_i, sents_text_dst_orig):
+            sent_dst = sents_text_dst_orig[dst_i]
+        else:
+            sent_dst = empty_tag
+            dst_i = empty_tag
+
+        # if both sentences are empty skip them
+        if sent_src == empty_tag and sent_dst == empty_tag:
+            continue
+
         info_zip.append(
             (
-                sents_text_src_orig[i_src],
-                sents_text_dst_orig[i_dst],
-                i_src,
-                i_dst,
-                all_max_flattened[i_src],
+                sent_src,
+                sent_dst,
+                src_i,
+                dst_i,
+                original_guess_dst_i,
             )
         )
 

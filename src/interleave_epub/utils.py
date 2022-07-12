@@ -15,7 +15,7 @@ def validate_index(
     if min_index <= index < len_list:
         return index
     if index >= len_list:
-        return len_list
+        return len_list - 1
     return min_index
 
 
