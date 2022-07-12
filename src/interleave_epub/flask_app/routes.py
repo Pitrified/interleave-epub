@@ -430,8 +430,9 @@ def epub_align_cache(btn=-99, btn2=-90):
             gs["curr_i_src"] -= sent_win_len
         elif req_arg["src_move"] == "forward":
             gs["curr_i_src"] += sent_win_len
-        curr_i_src = validate_index(gs["curr_i_src"], sents_text_src_orig)
+        gs["curr_i_src"] = validate_index(gs["curr_i_src"], sents_text_src_orig)
 
+    # compute it from the ooo list
     else:
         # if you already selected the correct i_dst for this i_src it should be skipped
         for fixed_src_i in gs["fixed_src_i_set"]:
@@ -439,14 +440,11 @@ def epub_align_cache(btn=-99, btn2=-90):
             is_ooo_flattened[fixed_src_i] = False
         # find the first one to fix if it exists
         if True in is_ooo_flattened:
-            curr_i_src = is_ooo_flattened.index(True)
+            gs["curr_i_src"] = is_ooo_flattened.index(True)
         else:
-            curr_i_src = 0
+            gs["curr_i_src"] = 0
             print(f"Finished aligning")
-            # might want to save the thing and move on to the next chapter
-
-    # save it in the app status
-    gs["curr_i_src"] = curr_i_src
+            # might want to save the thing and move on to the next chapter automagically
 
     ###################################################################
     # the best match we have for now
@@ -456,37 +454,24 @@ def epub_align_cache(btn=-99, btn2=-90):
 
     # if we know it, we might want to change it
     if "mean_max_i_dst" in gs and "dst_move" in req_arg:
-        print(f"{req_arg['dst_move']=}")
         if req_arg["dst_move"] == "back":
             gs["mean_max_i_dst"] -= sent_win_len
-            print(f"back mean max to {gs['mean_max_i_dst']}")
-            # TODO use the validate_index
-            if gs["mean_max_i_dst"] < 0:
-                gs["mean_max_i_dst"] = 0
         elif req_arg["dst_move"] == "forward":
             gs["mean_max_i_dst"] += sent_win_len
-            print(f"forw mean max to {gs['mean_max_i_dst']}")
-            # this is actually num sent dst, we might have it saner in the Chapter object
-            if gs["mean_max_i_dst"] > len(sents_text_dst_orig):
-                gs["mean_max_i_dst"] = len(sents_text_dst_orig)
-                print(f"limiting mean max to {gs['mean_max_i_dst']}")
+        gs["mean_max_i_dst"] = validate_index(gs["mean_max_i_dst"], sents_text_dst_orig)
+
+    # if we never saw this (the first time) compute it
     else:
-        # if we never saw this (the first time) compute it
-        gs["mean_max_i_dst"] = int(amf_series[curr_i_src])
+        gs["mean_max_i_dst"] = int(amf_series[gs["curr_i_src"]])
 
-    mean_max_i_dst = gs["mean_max_i_dst"]
-
-    # mean_max_i_dst = int(amf_series[curr_i_src])
-
-    print(f"{curr_i_src=} {all_max_flattened[curr_i_src]=} {amf_series[curr_i_src]=}")
+    print(f"{gs['curr_i_src']=} {amf_series[gs['curr_i_src']]=}")
 
     ###################################################################
     # build zipped infos for visualization
     info_zip = []
     for i in range(-sent_win_len, sent_win_len):
-        i_src = curr_i_src + i
-        i_dst = mean_max_i_dst + i
-        # print(f"{all_i[i_src]=} {i_src=}") assert all_i[i_src] == i_src
+        i_src = gs["curr_i_src"] + i
+        i_dst = gs["mean_max_i_dst"] + i
         # FIXME this getitem should be made safe, can't access -5
         # and it crashes on i>len(sents)
         info_zip.append(
@@ -515,5 +500,5 @@ def epub_align_cache(btn=-99, btn2=-90):
         sim_plot=sim_fig_str,
         match_plot=match_fig_str,
         info_zip=info_zip,
-        curr_i_src=curr_i_src,
+        curr_i_src=gs["curr_i_src"],
     )
