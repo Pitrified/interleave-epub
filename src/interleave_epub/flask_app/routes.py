@@ -27,6 +27,7 @@ from interleave_epub.flask_app.asset_loader import (
 )
 from interleave_epub.flask_app.utils import fig2imgb64str
 from interleave_epub.nlp.utils import sentence_encode_np
+from interleave_epub.utils import validate_index
 
 
 @app.route("/")
@@ -249,6 +250,8 @@ def epub_align():
 def epub_align_cache(btn=-99, btn2=-90):
     """Align manually a chapter, but cache the starting point."""
     print(f"\n----- align_cache -----")
+
+    ###################################################################
     # parse POST request
     req_arg = {}
     if request.method == "POST":
@@ -260,10 +263,14 @@ def epub_align_cache(btn=-99, btn2=-90):
         req_arg = {k: request.args[k] for k in request.args}
     print(f"{req_arg}")
 
+    ###################################################################
+    # load state
     constants_loader()
-
     cache_fol_loader()
+    if "fixed_src_i_set" not in gs:
+        gs["fixed_src_i_set"] = set()
 
+    ###################################################################
     # indexes of the chapters
     # somewhere someone found this values
     # that is, the index of the first real chap we need to analyze
@@ -274,6 +281,7 @@ def epub_align_cache(btn=-99, btn2=-90):
     chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
     # chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
 
+    ###################################################################
     # reload the sentences and some info on the ids
     # this whole thing is actually already inside EPubs, this is just caching
     # if it is the first time loading the cache
@@ -295,6 +303,7 @@ def epub_align_cache(btn=-99, btn2=-90):
     sents_len_dst_orig = sents_info["sents_len_dst_orig"]
     sents_len_dst_tran = sents_info["sents_len_dst_tran"]
 
+    ###################################################################
     # match info cache location
     match_info_path = gs["cache_fol"] / f"match_info_{chap_curr_delta}.json"
 
@@ -367,9 +376,7 @@ def epub_align_cache(btn=-99, btn2=-90):
         match_fig_str = gs["match_fig_str"]
         sim_fig_str = gs["sim_fig_str"]
 
-    if "fixed_src_i_set" not in gs:
-        gs["fixed_src_i_set"] = set()
-
+    ###################################################################
     # we picked a dst id to match the sentence properly
     if "dst_pick" in req_arg:
         # check we actually know what index to match it to
@@ -380,10 +387,12 @@ def epub_align_cache(btn=-99, btn2=-90):
             # add the current sentence to the fixed set
             gs["fixed_src_i_set"].add(gs["curr_i_src"])
 
+    ###################################################################
     # check for out of order ids
     is_ooo_flattened = []
     for j, (good_i, good_max_rescaled) in enumerate(zip(all_i, all_max_flattened)):
         ooo = False
+        # TODO do this by validating the index, then checking the value
         if j == 0:
             # only check to the right for the first value
             if good_max_rescaled > all_max_flattened[j + 1]:
@@ -405,25 +414,41 @@ def epub_align_cache(btn=-99, btn2=-90):
     # random constant that will be put somewhere
     sent_win_len = 10
 
+    # interpolate the values for the ooo guesses
     amf_series = pd.Series(all_max_flattened)
     amf_series[is_ooo_flattened] = np.nan
     amf_series.interpolate(inplace=True)
 
+    ###################################################################
     # the current sent we are fixing for src
-    # FIXME unless you are manually changing the i_src from a button
-    # so in the request.args you see new_i_src param
-    # FIXME also if you select the correct i_dst this i_src should be skipped
-    for fixed_src_i in gs["fixed_src_i_set"]:
-        print(f"skipping {fixed_src_i=}")
-        is_ooo_flattened[fixed_src_i] = False
-    if True in is_ooo_flattened:
-        curr_i_src = is_ooo_flattened.index(True)
-        gs["curr_i_src"] = curr_i_src
-    else:
-        curr_i_src = 0
-        print(f"Finished aligning")
-        # might want to save the thing and move on to the next chapter
 
+    # manually change the i_src from a button
+    # so in the request.args you see new_i_src param
+    # the mean_max_i_dst will be updated accordingly
+    if "curr_i_src" in gs and "src_move" in req_arg:
+        if req_arg["src_move"] == "back":
+            gs["curr_i_src"] -= sent_win_len
+        elif req_arg["src_move"] == "forward":
+            gs["curr_i_src"] += sent_win_len
+        curr_i_src = validate_index(gs["curr_i_src"], sents_text_src_orig)
+
+    else:
+        # if you already selected the correct i_dst for this i_src it should be skipped
+        for fixed_src_i in gs["fixed_src_i_set"]:
+            print(f"skipping {fixed_src_i=}")
+            is_ooo_flattened[fixed_src_i] = False
+        # find the first one to fix if it exists
+        if True in is_ooo_flattened:
+            curr_i_src = is_ooo_flattened.index(True)
+        else:
+            curr_i_src = 0
+            print(f"Finished aligning")
+            # might want to save the thing and move on to the next chapter
+
+    # save it in the app status
+    gs["curr_i_src"] = curr_i_src
+
+    ###################################################################
     # the best match we have for now
     # get the mean of neighboring all_max_flattened as possible match for curr_i_src (i)
     # and use that mean as center in the info_zip for french right side sentences ids
@@ -435,6 +460,7 @@ def epub_align_cache(btn=-99, btn2=-90):
         if req_arg["dst_move"] == "back":
             gs["mean_max_i_dst"] -= sent_win_len
             print(f"back mean max to {gs['mean_max_i_dst']}")
+            # TODO use the validate_index
             if gs["mean_max_i_dst"] < 0:
                 gs["mean_max_i_dst"] = 0
         elif req_arg["dst_move"] == "forward":
@@ -454,6 +480,7 @@ def epub_align_cache(btn=-99, btn2=-90):
 
     print(f"{curr_i_src=} {all_max_flattened[curr_i_src]=} {amf_series[curr_i_src]=}")
 
+    ###################################################################
     # build zipped infos for visualization
     info_zip = []
     for i in range(-sent_win_len, sent_win_len):
@@ -472,6 +499,8 @@ def epub_align_cache(btn=-99, btn2=-90):
             )
         )
 
+    ###################################################################
+    # save the match info to resume if the app is closed
     match_info = {
         "all_i": all_i,
         "all_max_flattened": all_max_flattened,
