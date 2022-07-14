@@ -26,16 +26,24 @@ class Paragraph:
                 Do not split in sentences if the par is short.
                 Merge short sentences.
         """
+        # save a reference to the chapter containing this paragraph
         self.chapter = chapter
 
+        # save various nlp tools
         self.nlp: dict[str, Language] = self.chapter.nlp
         self.pipe: dict[str, TranslationPipelineCache] = self.chapter.pipe
         self.lang_orig: str = self.chapter.lang_orig
         self.lang_dest: str = self.chapter.lang_dest
-
         self.lang_tr = f"{self.lang_orig}-{self.lang_dest}"
 
+        # save the tag
         self.p_tag = p_tag
+
+        # add lang info in the tag
+        self.p_tag["lang_orig"] = self.lang_orig
+        self.p_tag["class"] = self.p_tag.get("class", []) + [f"lang_{self.lang_orig}"]  # type: ignore
+        # Operator "+" not supported for types "str | list[str] | None" and "list[str]"
+
 
         # MAYBE: move to method that does clean up well
         self.par_str = str(self.p_tag.string)  # we want a str, not a NavigableString
@@ -43,6 +51,7 @@ class Paragraph:
         self.par_str = self.par_str.replace("\n", " ")
         self.par_str = self.par_str.replace("\r", " ")
 
+        # TODO: improve sentence split
         self.par_doc = self.nlp[self.lang_orig](self.par_str)
         self.sents_orig = list(self.par_doc.sents)
 
