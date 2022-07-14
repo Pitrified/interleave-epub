@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from werkzeug.datastructures import FileStorage
+from interleave_epub.epub.build_aligned_chap import build_aligned_epub
 
 from interleave_epub.epub.chapter import Chapter
 from interleave_epub.epub.epub import EPub
@@ -277,7 +278,8 @@ def epub_align_cache(btn=-99, btn2=-90):
     chap_id_start = {lt: 0 for lt in gs["lts"]}
     gs["chap_id_start"] = chap_id_start
     # then we add delta
-    chap_curr_delta = 1
+    chap_curr_delta = 0
+    gs["chap_curr_delta"] = chap_curr_delta
     chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
     # chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
 
@@ -302,6 +304,11 @@ def epub_align_cache(btn=-99, btn2=-90):
     sents_len_src_orig = sents_info["sents_len_src_orig"]
     sents_len_dst_orig = sents_info["sents_len_dst_orig"]
     sents_len_dst_tran = sents_info["sents_len_dst_tran"]
+
+    ###################################################################
+    # save the interleaved epub
+    if "save_epub" in req_arg and req_arg["save_epub"] == "True":
+        build_aligned_epub()
 
     ###################################################################
     # match info cache location
