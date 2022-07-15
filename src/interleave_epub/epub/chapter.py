@@ -75,16 +75,22 @@ class Chapter:
         # original sentences
         self.sents_text_orig = []
         self.sents_doc_orig = []
-        for _, sent_orig in self.enumerate_sents(which_sent="orig"):
+        self.sents_psid = []
+        self.sents_len_orig = []
+        for sent_psid, sent_orig in self.enumerate_sents(which_sent="orig"):
             self.sents_text_orig.append(sent_orig.text)
             self.sents_doc_orig.append(sent_orig)
+            self.sents_psid.append(sent_psid)
+            self.sents_len_orig.append(len(sent_orig))
 
         # translated sentences
         self.sents_text_tran = []
         self.sents_doc_tran = []
+        self.sents_len_tran = []
         for _, sent_tran in self.enumerate_sents(which_sent="tran"):
             self.sents_text_tran.append(sent_tran.text)
             self.sents_doc_tran.append(sent_tran)
+            self.sents_len_tran.append(len(sent_tran))
 
         # the number of sentences in this chapter
         self.sents_num = len(self.sents_text_orig)

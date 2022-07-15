@@ -44,7 +44,6 @@ class Paragraph:
         self.p_tag["class"] = self.p_tag.get("class", []) + [f"lang_{self.lang_orig}"]  # type: ignore
         # Operator "+" not supported for types "str | list[str] | None" and "list[str]"
 
-
         # MAYBE: move to method that does clean up well
         self.par_str = str(self.p_tag.string)  # we want a str, not a NavigableString
         self.par_str = self.par_str.replace("\n\r", " ")

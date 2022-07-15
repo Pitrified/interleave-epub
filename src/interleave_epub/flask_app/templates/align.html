@@ -3,41 +3,38 @@
 {% block container_content %}
 <h1>Align chapters</h1>
 
-<!-- <img src="{{ sim_plot }}" alt="Similarity plot."> -->
-<!-- <img src="{{ match_plot }}" alt="Matching sent plot."> -->
-
 <div>
     <div>
         Src:
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move='back') }}">
+        <a class="btn btn-info" href="{{ url_for('epub_align', src_move='back') }}">
             Back
         </a>
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move='forward') }}">
+        <a class="btn btn-info" href="{{ url_for('epub_align', src_move='forward') }}">
             Forward
         </a>
         Dst:
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move='back') }}">
+        <a class="btn btn-info" href="{{ url_for('epub_align', dst_move='back') }}">
             Back
         </a>
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move='forward') }}">
+        <a class="btn btn-info" href="{{ url_for('epub_align', dst_move='forward') }}">
             Forward
         </a>
-        Chapter:
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache', chap_move='back') }}">
+        Chapter {{ gs['chap_curr_delta'] }}:
+        <a class="btn btn-info" href="{{ url_for('epub_align', chap_move='back') }}">
             Back
         </a>
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache', chap_move='forward') }}">
+        <a class="btn btn-info" href="{{ url_for('epub_align', chap_move='forward') }}">
             Forward
         </a>
     </div>
     <div>
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache', ignore_cached_match=True) }}">
+        <a class="btn btn-info" href="{{ url_for('epub_align', ignore_cached_match=True) }}">
             Ignore cached match
         </a>
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache', save_epub=True) }}">
+        <a class="btn btn-info" href="{{ url_for('epub_align', save_epub=True) }}">
             Save book
         </a>
-        <a class="btn btn-info" href="{{ url_for('epub_align_cache') }}">
+        <a class="btn btn-info" href="{{ url_for('epub_align') }}">
             No args
         </a>
     </div>
@@ -66,12 +63,12 @@
                 </td>
                 <td style="width: 410px; word-wrap: break-word; text-align: justify;">{{ info[1] }}</td>
                 <td style="width: 50px;">
-                    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_pick=info[2]) }}">
+                    <a class="btn btn-info" href="{{ url_for('epub_align', src_pick=info[2]) }}">
                         {{ info[2] }}
                     </a>
                 </td>
                 <td style="width: 50px;">
-                    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_pick=info[3]) }}">
+                    <a class="btn btn-info" href="{{ url_for('epub_align', dst_pick=info[3]) }}">
                         {{ info[3] }}
                     </a>
                 </td>
@@ -83,4 +80,8 @@
         </tbody>
     </table>
 </div>
+
+<img src="{{ sim_plot }}" alt="Similarity plot.">
+<img src="{{ match_plot }}" alt="Matching sent plot.">
+
 {% endblock %}

@@ -1,6 +1,7 @@
 """Routes for the flask app."""
 import io
 import json
+from math import isnan
 from pathlib import Path
 from pprint import pprint
 from typing import IO, Optional
@@ -149,6 +150,18 @@ def epub_align():
         return redirect(url_for("epub_load"))
 
     ###################################################################
+    # parse POST request
+    req_arg = {}
+    if request.method == "POST":
+        print(f"{request=}")
+    if request.method == "GET":
+        print(f"GET {request=}")
+        print(f"GET {request.args=}")
+        # flatten the multidict who cares
+        req_arg = {k: request.args[k] for k in request.args}
+    print(f"{req_arg}")
+
+    ###################################################################
     # load misc global state
     constants_loader()
     cache_fol_loader()
@@ -171,88 +184,357 @@ def epub_align():
 
     ###################################################################
     # chapter ids to align, set with some forms in an intermediate page
-    # MAYBE some align_setup
+    # the index of the first real chap we need to analyze
+    # FIXME some align_setup, this seems quite important
     chap_id_start = {lt: 0 for lt in gs["lts"]}
     gs["chap_id_start"] = chap_id_start
-    # then we add delta
-    chap_curr_delta = 0
-    gs["chap_curr_delta"] = chap_curr_delta
+    chap_tot_num = 6
+
+    # then we add delta:
+    # if we know the delta
+    if "chap_curr_delta" in gs:
+        # and want to move it
+        if "chap_move" in req_arg:
+            chap_old_delta = gs["chap_curr_delta"]
+            if req_arg["chap_move"] == "back":
+                gs["chap_curr_delta"] -= 1
+            elif req_arg["chap_move"] == "forward":
+                gs["chap_curr_delta"] += 1
+            gs["chap_curr_delta"] = validate_index(
+                gs["chap_curr_delta"], list(range(chap_tot_num))
+            )
+            # if the chapter changed, clean the global state from chapter specific data
+            if chap_old_delta != gs["chap_curr_delta"]:
+                gs.pop("sents_info", 0)
+                gs.pop("all_i", 0)
+                gs.pop("fixed_src_i_set", 0)
+                gs.pop("curr_i_src", 0)
+    # initialize the delta if we don't know it
+    else:
+        gs["chap_curr_delta"] = 0
+    # save it outside gs for ease of use
+    chap_curr_delta = gs["chap_curr_delta"]
+    # build the chap id for each epub
     chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
 
     # get the actual chapter objects
     chap_selected = {lt: epub[lt].chapters[chap_id[lt]] for lt in lts}
 
+    ###################################################################
+    # save the interleaved epub
+    if "save_epub" in req_arg and req_arg["save_epub"] == "True":
+        build_aligned_epub()
+
+    ###################################################################
+    # the fixed src i (has to be after chap_curr_delta is dealt with)
+    if "fixed_src_i_set" not in gs:
+        gs["fixed_src_i_set"] = set()
+
+    ###################################################################
+    # just a sample sentence
     sent_fr = chap_selected[lt_src].paragraphs[0].sents_orig[0]
     print(f"{sent_fr.text=}")
     sent_en = chap_selected[lt_dst].paragraphs[0].sents_tran[0]
     print(f"{sent_en.text=}")
 
-    # we need an `active_sent_src_id`, can be set by clicking src button
-    # that will be matched to the `dst_id` when clicked dst button
-
+    ###################################################################
     # all sentences at once
     # we should bring both to en somehow
 
-    # FIXME a whole bunch of this is already inside the EPub object
-    sents_text_src_orig = []
-    sents_psid_src_orig = []
-    for k, sent in chap_selected[lt_src].enumerate_sents(which_sent="orig"):
-        text_src = sent.text
-        sents_text_src_orig.append(text_src)
-        sents_psid_src_orig.append(k)
-    sents_len_src_orig = [len(d) for d in chap_selected[lt_src].sents_doc_orig]
+    # we need an `active_sent_src_id`, can be set by clicking src button
+    # that will be matched to the `dst_id` when clicked dst button
 
-    sents_text_dst_orig = []
-    sents_psid_dst_orig = []
-    for k, sent in chap_selected[lt_dst].enumerate_sents(which_sent="orig"):
-        text_dst = sent.text
-        sents_text_dst_orig.append(text_dst)
-        sents_psid_dst_orig.append(k)
-    sents_len_dst_orig = [len(d) for d in chap_selected[lt_dst].sents_doc_orig]
-    sents_text_dst_tran = []
-    sents_psid_dst_tran = []
-    for k, sent in chap_selected[lt_dst].enumerate_sents(which_sent="tran"):
-        text_dst_tran = sent.text
-        sents_text_dst_tran.append(text_dst_tran)
-        sents_psid_dst_tran.append(k)
-    sents_len_dst_tran = [len(d) for d in chap_selected[lt_dst].sents_doc_tran]
+    # # FIXME a whole bunch of this is already inside the EPub object
+    # # src
+    # sents_text_src_orig = []
+    # sents_psid_src_orig = []
+    # for k, sent in chap_selected[lt_src].enumerate_sents(which_sent="orig"):
+    #     text_src = sent.text
+    #     sents_text_src_orig.append(text_src)
+    #     sents_psid_src_orig.append(k)
+    # sents_len_src_orig = [len(d) for d in chap_selected[lt_src].sents_doc_orig]
+    # # dst
+    # sents_text_dst_orig = []
+    # sents_psid_dst_orig = []
+    # for k, sent in chap_selected[lt_dst].enumerate_sents(which_sent="orig"):
+    #     text_dst = sent.text
+    #     sents_text_dst_orig.append(text_dst)
+    #     sents_psid_dst_orig.append(k)
+    # sents_len_dst_orig = [len(d) for d in chap_selected[lt_dst].sents_doc_orig]
+    # sents_text_dst_tran = []
+    # sents_psid_dst_tran = []
+    # for k, sent in chap_selected[lt_dst].enumerate_sents(which_sent="tran"):
+    #     text_dst_tran = sent.text
+    #     sents_text_dst_tran.append(text_dst_tran)
+    #     sents_psid_dst_tran.append(k)
+    # sents_len_dst_tran = [len(d) for d in chap_selected[lt_dst].sents_doc_tran]
+    # # dump them for later,
+    # # developing is still slow as the app gets reloaded anyway
+    # sents_info = {
+    #     "sents_text_src_orig": sents_text_src_orig,
+    #     "sents_text_dst_orig": sents_text_dst_orig,
+    #     "sents_text_dst_tran": sents_text_dst_tran,
+    #     "sents_psid_src_orig": sents_psid_src_orig,
+    #     "sents_psid_dst_orig": sents_psid_dst_orig,
+    #     "sents_psid_dst_tran": sents_psid_dst_tran,
+    #     "sents_len_src_orig": sents_len_src_orig,
+    #     "sents_len_dst_orig": sents_len_dst_orig,
+    #     "sents_len_dst_tran": sents_len_dst_tran,
+    # }
+    # sents_info_path = Path(f"sents_info_{chap_curr_delta}.json")
+    # sents_info_path.write_text(json.dumps(sents_info, indent=4))
 
-    # dump them for later,
-    # developing is still slow as the app gets reloaded anyway
-    sents_info = {
-        "sents_text_src_orig": sents_text_src_orig,
-        "sents_text_dst_orig": sents_text_dst_orig,
-        "sents_text_dst_tran": sents_text_dst_tran,
-        "sents_psid_src_orig": sents_psid_src_orig,
-        "sents_psid_dst_orig": sents_psid_dst_orig,
-        "sents_psid_dst_tran": sents_psid_dst_tran,
-        "sents_len_src_orig": sents_len_src_orig,
-        "sents_len_dst_orig": sents_len_dst_orig,
-        "sents_len_dst_tran": sents_len_dst_tran,
+    # # encode them
+    # enc_orig_src = sentence_encode_np(
+    #     sent_transformer[sent_transformer_lt], chap_selected[lt_src].sents_text_orig
+    # )
+    # enc_tran_dst = sentence_encode_np(
+    #     sent_transformer[sent_transformer_lt], chap_selected[lt_dst].sents_text_tran
+    # )
+    # # compute the similarity
+    # sim = cosine_similarity(enc_orig_src, enc_tran_dst)
+    # fig, ax = plt.subplots()
+    # ax.imshow(sim)
+    # ax.set_title(f"Similarity *en* vs *fr_translated*")
+    # ax.set_ylabel("en")
+    # ax.set_xlabel("fr_tran")
+    # # plt.show()
+    # sim_fig_str = fig2imgb64str(fig)
+    # # print(f"{sim_fig_str=}")
+
+    ###################################################################
+    # compute similarity best guess or load it
+
+    # match info cache location
+    match_info_path = gs["cache_fol"] / f"match_info_{chap_curr_delta}.json"
+
+    # button to ignore cache was pressed
+    if "ignore_cached_match" in req_arg and req_arg["ignore_cached_match"] == "True":
+        ignore_cached_match = True
+        print(f"{ignore_cached_match=}")
+    else:
+        ignore_cached_match = False
+        print(f"{ignore_cached_match=}")
+
+    # if it is the first time or we want to ignore the cached data and restart
+    # compute sim and hopeful matching
+    if "all_i" not in gs or ignore_cached_match:
+
+        if match_info_path.exists() and not ignore_cached_match:
+            # load the cached matches
+            print(f"found match info at {match_info_path}")
+            match_info = json.loads(match_info_path.read_text())
+            all_i = match_info["all_i"]
+            all_max_flattened = match_info["all_max_flattened"]
+            match_fig_str = match_info["match_fig_str"]
+            sim_fig_str = match_info["sim_fig_str"]
+
+        else:
+            print(f'Encoding sentences and computing matching')
+            # encode the sentences
+            enc_orig_src = sentence_encode_np(
+                sent_transformer[sent_transformer_lt],
+                chap_selected[lt_src].sents_text_orig,
+            )
+            enc_tran_dst = sentence_encode_np(
+                sent_transformer[sent_transformer_lt],
+                chap_selected[lt_dst].sents_text_tran,
+            )
+
+            # compute the similarity
+            sim = cosine_similarity(enc_orig_src, enc_tran_dst)
+
+            # plot it for fun
+            fig, ax = plt.subplots()
+            ax.imshow(sim)
+            ax.set_title(f"Similarity *en* vs *fr_translated*")
+            ax.set_ylabel("en")
+            ax.set_xlabel("fr_tran")
+            # plt.show()
+            sim_fig_str = fig2imgb64str(fig)
+            # print(f"{sim_fig_str=}")
+
+            print("Matching sim")
+
+            fig_match, all_i, all_max_flattened = match_similarity(
+                sim,
+                chap_selected[lt_src].sents_len_orig,
+                chap_selected[lt_dst].sents_len_tran,
+            )
+            match_fig_str = fig2imgb64str(fig_match)
+
+            # save it for later wtf I hate everything
+            gs["all_i"] = all_i
+            gs["all_max_flattened"] = all_max_flattened
+            gs["match_fig_str"] = match_fig_str
+            gs["sim_fig_str"] = sim_fig_str
+
+    else:
+        # the point is that all_max_flattened will actually change
+        print(f"reloading matching from global state")
+        all_i = gs["all_i"]
+        all_max_flattened = gs["all_max_flattened"]
+        match_fig_str = gs["match_fig_str"]
+        sim_fig_str = gs["sim_fig_str"]
+
+    ###################################################################
+    # we picked a dst id to match the sentence properly
+    if "dst_pick" in req_arg:
+        # check we actually know what index to match it to
+        if "curr_i_src" in gs:
+            print(f"manual match for {gs['curr_i_src']=} {req_arg['dst_pick']=}")
+            # update the matching list
+            all_max_flattened[gs["curr_i_src"]] = int(req_arg["dst_pick"])
+            # add the current sentence to the fixed set
+            gs["fixed_src_i_set"].add(gs["curr_i_src"])
+
+    ###################################################################
+    # check for out of order ids
+    is_ooo_flattened = []
+    for j, (good_i, good_max_rescaled) in enumerate(zip(all_i, all_max_flattened)):
+        ooo = False
+        # TODO do this by validating the index, then checking the value
+        if j == 0:
+            # only check to the right for the first value
+            if good_max_rescaled > all_max_flattened[j + 1]:
+                ooo = True
+        elif j == len(all_max_flattened) - 1:
+            # only check to the left for the last value
+            if good_max_rescaled < all_max_flattened[j - 1]:
+                ooo = True
+        else:
+            if (
+                good_max_rescaled > all_max_flattened[j + 1]
+                or good_max_rescaled < all_max_flattened[j - 1]
+            ):
+                ooo = True
+        if ooo:
+            print(j, good_i, good_max_rescaled)
+        is_ooo_flattened.append(ooo)
+
+    # random constant that will be put somewhere
+    sent_win_len = 10
+
+    # interpolate the values for the ooo guesses
+    amf_series = pd.Series(all_max_flattened)
+    amf_series[is_ooo_flattened] = np.nan
+    amf_series.interpolate(inplace=True)
+
+    ###################################################################
+    # the current sent we are fixing for src
+
+    # manually change the src_i from a button
+    # so in the request.args you see new_i_src param
+    # the mean_max_i_dst will be updated accordingly
+    if "curr_i_src" in gs and "src_move" in req_arg:
+        if req_arg["src_move"] == "back":
+            gs["curr_i_src"] -= sent_win_len
+        elif req_arg["src_move"] == "forward":
+            gs["curr_i_src"] += sent_win_len
+        gs["curr_i_src"] = validate_index(
+            gs["curr_i_src"], chap_selected[lt_src].sents_text_orig
+        )
+
+    # compute it from the ooo list
+    else:
+        # if you already selected the correct dst_i for this src_i it should be skipped
+        for fixed_src_i in gs["fixed_src_i_set"]:
+            print(f"skipping {fixed_src_i=}")
+            is_ooo_flattened[fixed_src_i] = False
+        # find the first one to fix if it exists
+        if True in is_ooo_flattened:
+            gs["curr_i_src"] = is_ooo_flattened.index(True)
+        else:
+            gs["curr_i_src"] = 0
+            print(f"Finished aligning")
+            # might want to save the thing and move on to the next chapter automagically
+
+    ###################################################################
+    # the best match we have for now
+    # get the mean of neighboring all_max_flattened as possible match for curr_i_src (i)
+    # and use that mean as center in the info_zip for french right side sentences ids
+    # mean_max_i_dst = all_max_flattened[curr_i_src]
+
+    # if we know it, we might want to change it
+    if "mean_max_i_dst" in gs and "dst_move" in req_arg:
+        if req_arg["dst_move"] == "back":
+            gs["mean_max_i_dst"] -= sent_win_len
+        elif req_arg["dst_move"] == "forward":
+            gs["mean_max_i_dst"] += sent_win_len
+        gs["mean_max_i_dst"] = validate_index(
+            gs["mean_max_i_dst"], chap_selected[lt_dst].sents_text_orig
+        )
+
+    # if we never saw this (the first time) compute it
+    # or any time we are not moving it manually
+    else:
+        mean_max_i_dst_possible = amf_series[gs["curr_i_src"]]
+        print(f"{mean_max_i_dst_possible} {type(mean_max_i_dst_possible)}")
+        if isnan(mean_max_i_dst_possible):
+            gs["mean_max_i_dst"] = 0
+        else:
+            gs["mean_max_i_dst"] = int(mean_max_i_dst_possible)
+
+    print(f"{gs['curr_i_src']=} {amf_series[gs['curr_i_src']]=}")
+
+    ###################################################################
+    # build zipped infos for visualization
+    info_zip = []
+    empty_tag = "-"
+    for i in range(-sent_win_len, sent_win_len):
+
+        # src sent
+        src_i = gs["curr_i_src"] + i
+        if is_index_valid(src_i, chap_selected[lt_src].sents_text_orig):
+            print(f"validating {src_i=} {len(chap_selected[lt_src].sents_text_orig)=}")
+            sent_src = chap_selected[lt_src].sents_text_orig[src_i]
+            original_guess_dst_i = all_max_flattened[src_i]
+        else:
+            sent_src = empty_tag
+            src_i = empty_tag
+            original_guess_dst_i = empty_tag
+
+        # dst sent
+        dst_i = gs["mean_max_i_dst"] + i
+        if is_index_valid(dst_i, chap_selected[lt_dst].sents_text_orig):
+            sent_dst = chap_selected[lt_dst].sents_text_orig[dst_i]
+        else:
+            sent_dst = empty_tag
+            dst_i = empty_tag
+
+        # if both sentences are empty skip them
+        if sent_src == empty_tag and sent_dst == empty_tag:
+            continue
+
+        info_zip.append(
+            (
+                sent_src,
+                sent_dst,
+                src_i,
+                dst_i,
+                original_guess_dst_i,
+            )
+        )
+
+    ###################################################################
+    # save the match info to resume if the app is closed
+    match_info = {
+        "all_i": all_i,
+        "all_max_flattened": all_max_flattened,
+        "match_fig_str": match_fig_str,
+        "sim_fig_str": sim_fig_str,
     }
-    sents_info_path = Path(f"sents_info_{chap_curr_delta}.json")
-    sents_info_path.write_text(json.dumps(sents_info, indent=4))
+    match_info_path.write_text(json.dumps(match_info, indent=4))
+    print(f"saved in {match_info_path}")
 
-    # encode them
-    enc_en_orig = sentence_encode_np(
-        sent_transformer[sent_transformer_lt], sents_text_src_orig
+    return render_template(
+        "align.html",
+        sim_plot=sim_fig_str,
+        match_plot=match_fig_str,
+        info_zip=info_zip,
+        curr_i_src=gs["curr_i_src"],
+        gs=gs,
     )
-    enc_fr_tran = sentence_encode_np(
-        sent_transformer[sent_transformer_lt], sents_text_dst_tran
-    )
-
-    # compute the similarity
-    sim = cosine_similarity(enc_en_orig, enc_fr_tran)
-    fig, ax = plt.subplots()
-    ax.imshow(sim)
-    ax.set_title(f"Similarity *en* vs *fr_translated*")
-    ax.set_ylabel("en")
-    ax.set_xlabel("fr_tran")
-    # plt.show()
-    sim_fig_str = fig2imgb64str(fig)
-    # print(f"{sim_fig_str=}")
-
-    return render_template("align.html", sim_plot=sim_fig_str)
 
 
 @app.route("/align_cache", methods=["GET", "POST"])
@@ -312,7 +594,7 @@ def epub_align_cache(btn=-99, btn2=-90):
     chap_curr_delta = gs["chap_curr_delta"]
     # build the chap id for each epub
     chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
-    
+
     ###################################################################
     # reload the sentences and some info on the ids
     # this whole thing is actually already inside EPubs, this is just caching
@@ -377,15 +659,15 @@ def epub_align_cache(btn=-99, btn2=-90):
             sent_transformer_lt = "en"
 
             # encode them
-            enc_en_orig = sentence_encode_np(
+            enc_orig_src = sentence_encode_np(
                 sent_transformer[sent_transformer_lt], sents_text_src_orig
             )
-            enc_fr_tran = sentence_encode_np(
+            enc_tran_dst = sentence_encode_np(
                 sent_transformer[sent_transformer_lt], sents_text_dst_tran
             )
 
             # compute the similarity
-            sim = cosine_similarity(enc_en_orig, enc_fr_tran)
+            sim = cosine_similarity(enc_orig_src, enc_tran_dst)
 
             # plot it for fun
             fig, ax = plt.subplots()

@@ -71,6 +71,7 @@ def spacy_loader():
 
 def sent_transformer_loader():
     """Load the sentence transformer."""
+    print("Loading sentence transformer")
     if "sent_transformer" in gs:
         return
     gs["sent_transformer"] = {
