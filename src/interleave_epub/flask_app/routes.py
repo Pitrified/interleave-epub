@@ -140,11 +140,18 @@ def epub_load():
 @app.route("/align", methods=["GET", "POST"])
 def epub_align():
     """Align two epubs."""
+    print(f"\n----- align -----")
+
+    ###################################################################
+    # check that we have files to load
     if "file_content" not in gs or any(f is None for f in gs["file_content"].values()):
         print("Redirecting back to load")
         return redirect(url_for("epub_load"))
 
+    ###################################################################
+    # load misc global state
     constants_loader()
+    cache_fol_loader()
     spacy_loader()
     pipe_loader()
 
@@ -152,22 +159,24 @@ def epub_align():
     sent_transformer = gs["sent_transformer"]
     sent_transformer_lt = "en"
 
-    # for mild sanity
+    # for mild sanity extract some values
     lt_src: str = gs["sd_to_lang"]["src"]
     lt_dst: str = gs["sd_to_lang"]["dst"]
     lts: dict[str, str] = gs["lts"]
 
+    ###################################################################
+    # build the epubs
     epub_loader()
     epub: dict[str, EPub] = gs["epub"]
 
+    ###################################################################
     # chapter ids to align, set with some forms in an intermediate page
     # MAYBE some align_setup
-    # chap_id = {lt: 1 for lt in gs["lts"]}
-    # chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
     chap_id_start = {lt: 0 for lt in gs["lts"]}
     gs["chap_id_start"] = chap_id_start
     # then we add delta
     chap_curr_delta = 0
+    gs["chap_curr_delta"] = chap_curr_delta
     chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
 
     # get the actual chapter objects
@@ -268,8 +277,6 @@ def epub_align_cache(btn=-99, btn2=-90):
     # load state
     constants_loader()
     cache_fol_loader()
-    if "fixed_src_i_set" not in gs:
-        gs["fixed_src_i_set"] = set()
 
     ###################################################################
     # indexes of the chapters
@@ -277,12 +284,35 @@ def epub_align_cache(btn=-99, btn2=-90):
     # that is, the index of the first real chap we need to analyze
     chap_id_start = {lt: 0 for lt in gs["lts"]}
     gs["chap_id_start"] = chap_id_start
-    # then we add delta
-    chap_curr_delta = 0
-    gs["chap_curr_delta"] = chap_curr_delta
-    chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
-    # chap_id_str = "_".join([str(cid) for cid in chap_id.values()])
 
+    # then we add delta:
+    # if we know the delta
+    if "chap_curr_delta" in gs:
+        # and want to move it
+        if "chap_move" in req_arg:
+            chap_old_delta = gs["chap_curr_delta"]
+            if req_arg["chap_move"] == "back":
+                gs["chap_curr_delta"] -= 1
+            elif req_arg["chap_move"] == "forward":
+                gs["chap_curr_delta"] += 1
+            chap_tot_num = 2
+            gs["chap_curr_delta"] = validate_index(
+                gs["chap_curr_delta"], list(range(chap_tot_num))
+            )
+            # if the chapter changed, clean the global state from chapter specific data
+            if chap_old_delta != gs["chap_curr_delta"]:
+                gs.pop("sents_info", 0)
+                gs.pop("all_i", 0)
+                gs.pop("fixed_src_i_set", 0)
+                gs.pop("curr_i_src", 0)
+    # initialize the delta if we don't know it
+    else:
+        gs["chap_curr_delta"] = 0
+    # save it outside gs for ease of use
+    chap_curr_delta = gs["chap_curr_delta"]
+    # build the chap id for each epub
+    chap_id = {lt: chap_id_start[lt] + chap_curr_delta for lt in gs["lts"]}
+    
     ###################################################################
     # reload the sentences and some info on the ids
     # this whole thing is actually already inside EPubs, this is just caching
@@ -309,6 +339,11 @@ def epub_align_cache(btn=-99, btn2=-90):
     # save the interleaved epub
     if "save_epub" in req_arg and req_arg["save_epub"] == "True":
         build_aligned_epub()
+
+    ###################################################################
+    # the fixed src i
+    if "fixed_src_i_set" not in gs:
+        gs["fixed_src_i_set"] = set()
 
     ###################################################################
     # match info cache location
@@ -468,6 +503,7 @@ def epub_align_cache(btn=-99, btn2=-90):
         gs["mean_max_i_dst"] = validate_index(gs["mean_max_i_dst"], sents_text_dst_orig)
 
     # if we never saw this (the first time) compute it
+    # or any time we are not moving it manually
     else:
         gs["mean_max_i_dst"] = int(amf_series[gs["curr_i_src"]])
 

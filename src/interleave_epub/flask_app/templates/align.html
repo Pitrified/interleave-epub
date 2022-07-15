@@ -7,29 +7,40 @@
 <!-- <img src="{{ match_plot }}" alt="Matching sent plot."> -->
 
 <div>
-    Src:
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move='back') }}">
-        Back
-    </a>
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move='forward') }}">
-        Forward
-    </a>
-    Dst:
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move='back') }}">
-        Back
-    </a>
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move='forward') }}">
-        Forward
-    </a>
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', ignore_cached_match=True) }}">
-        Ignore cached match
-    </a>
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', next_chapter=True) }}">
-        Next chapter
-    </a>
-    <a class="btn btn-info" href="{{ url_for('epub_align_cache', save_epub=True) }}">
-        Save EPub
-    </a>
+    <div>
+        Src:
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move='back') }}">
+            Back
+        </a>
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache', src_move='forward') }}">
+            Forward
+        </a>
+        Dst:
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move='back') }}">
+            Back
+        </a>
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache', dst_move='forward') }}">
+            Forward
+        </a>
+        Chapter:
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache', chap_move='back') }}">
+            Back
+        </a>
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache', chap_move='forward') }}">
+            Forward
+        </a>
+    </div>
+    <div>
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache', ignore_cached_match=True) }}">
+            Ignore cached match
+        </a>
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache', save_epub=True) }}">
+            Save book
+        </a>
+        <a class="btn btn-info" href="{{ url_for('epub_align_cache') }}">
+            No args
+        </a>
+    </div>
 </div>
 
 <div style="padding: 20px 0 20px 0;">
