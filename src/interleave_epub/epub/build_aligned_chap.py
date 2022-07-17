@@ -28,12 +28,11 @@ https://github.com/Pitrified/chapter-align/blob/main/src/chapter_align/align.py#
 
 from itertools import groupby
 import json
-from operator import itemgetter
 from pathlib import Path
 from bs4 import BeautifulSoup
 
-from more_itertools import lstrip
 from interleave_epub.epub.epub import EPub
+from interleave_epub.epub.epub_builder import EpubBuilder
 from interleave_epub.flask_app import gs
 
 
@@ -44,6 +43,41 @@ def build_aligned_epub():
     1. Build the epub.
     """
     print(f"\n----- build epub -----")
+
+    # passed as command line of via form who cares
+    gs["book_title"] = "The mystery of the Yellow Room"
+    gs["book_author"] = "Gaston Leroux"
+
+    build_composed_chapters()
+
+    build_epub()
+
+    print(f"----- build epub done -----\n")
+
+
+def build_epub():
+    """Build an epub with the composed chapters."""
+    epub_template_fol: Path = gs["epub_template_fol"]
+    cache_fol: Path = gs["cache_fol"]
+    book_title = gs["book_title"]
+    book_author = gs["book_author"]
+    dst_lang_tag = gs["lts"][1]
+
+    eb = EpubBuilder(
+        composed_folder=cache_fol,
+        template_epub_folder=epub_template_fol,
+        epub_out_folder=cache_fol,
+        tot_chapter_num=gs["chap_tot_num"],
+        author_name_full=book_author,
+        book_name_full=book_title,
+        lang_alpha2_tag=dst_lang_tag,
+    )
+    eb.do_build()
+
+
+def build_composed_chapters():
+    """Compose the chapter using known matching."""
+    print(f"\n----- build composed chapters -----")
 
     # # reload the sentences and some info on the ids
     # sents_info = gs["sents_info"]
@@ -65,10 +99,8 @@ def build_aligned_epub():
     cache_fol: Path = gs["cache_fol"]
     epub_template_fol: Path = gs["epub_template_fol"]
     composed_tag: str = gs["lts_pair_h"][1]
-
-    # passed as command line of via form who cares
-    book_title = "The mystery of the Yellow Room"
-    book_author = "Gaston Leroux"
+    book_title = gs["book_title"]
+    book_author = gs["book_author"]
 
     # load the chapter template
     tmpl_ch_path = epub_template_fol / "tmpl_ch.xhtml"
@@ -186,10 +218,9 @@ def build_aligned_epub():
             chapter_content=composed_chapter_text,
         )
 
-        print(f"----- build epub done -----\n")
-
         # where to save the chapter
-        composed_ch_path = cache_fol / f"composed_{chap_curr_delta}.xhtml"
+        # +1 so that the right chapter is in the right file
+        composed_ch_path = cache_fol / f"ch_{chap_curr_delta+1:04d}.xhtml"
 
         # build a soup for the chapter content
         parsed_text = BeautifulSoup(full_ch_text, features="html.parser")
