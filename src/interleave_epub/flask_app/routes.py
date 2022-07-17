@@ -181,6 +181,9 @@ def epub_align():
     # build the epubs
     epub_loader()
     epub: dict[str, EPub] = gs["epub"]
+    assert len(epub[lt_src].chapters) == len(
+        epub[lt_dst].chapters
+    ), "Mismatch in the number of chapters."
 
     ###################################################################
     # chapter ids to align, set with some forms in an intermediate page
@@ -188,7 +191,8 @@ def epub_align():
     # FIXME some align_setup, this seems quite important
     chap_id_start = {lt: 0 for lt in gs["lts"]}
     gs["chap_id_start"] = chap_id_start
-    chap_tot_num = 6
+    chap_tot_num = len(epub[lt_src].chapters)
+    gs["chap_tot_num"] = chap_tot_num
 
     # then we add delta:
     # if we know the delta
@@ -330,7 +334,7 @@ def epub_align():
             sim_fig_str = match_info["sim_fig_str"]
 
         else:
-            print(f'Encoding sentences and computing matching')
+            print(f"Encoding sentences and computing matching")
             # encode the sentences
             enc_orig_src = sentence_encode_np(
                 sent_transformer[sent_transformer_lt],

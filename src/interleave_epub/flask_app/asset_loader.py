@@ -171,3 +171,6 @@ def cache_fol_loader():
     if not cache_fol.exists():
         cache_fol.mkdir()
     gs["cache_fol"] = cache_fol
+
+    epub_template_fol = package_root_fol / "assets" / "epub_template"
+    gs["epub_template_fol"] = epub_template_fol
