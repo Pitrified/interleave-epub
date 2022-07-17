@@ -1,0 +1,51 @@
+.bodyclass {
+    display: block;
+    font-size: 1em;
+    margin: 0 5pt;
+    padding-left: 0;
+    padding-right: 0
+}
+
+.chaptitleclassdiv {
+    display: block
+}
+
+.chaptitleclassh1 {
+    display: block;
+    font-size: 1.41667em;
+    font-weight: bold;
+    line-height: 1.2;
+    margin: 0.67em 0;
+    text-align: center
+}
+
+.chaptitleclassh2 {
+    display: block;
+    font-size: 1.41667em;
+    font-weight: bold;
+    line-height: 1.2;
+    margin: 0.83em 0;
+    text-align: center
+}
+
+.chaptextclass {
+    display: block;
+    font-family: serif;
+    padding: 0
+}
+
+.chaptextcontentclass {
+    display: block;
+    font-family: serif;
+    margin: 1em 0;
+    padding: 0;
+    text-align: justify
+}
+
+.byline {
+    display: block;
+    font-family: serif;
+    margin: 1em 0;
+    padding: 0;
+    text-align: center
+}
