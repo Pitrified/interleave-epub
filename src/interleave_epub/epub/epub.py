@@ -7,6 +7,7 @@ from typing import IO, Union
 import zipfile
 
 from spacy.language import Language
+from tqdm import tqdm
 
 from interleave_epub.epub import chapter
 from interleave_epub.epub.utils import VALID_CHAP_EXT
@@ -51,7 +52,8 @@ class EPub:
         #     for chap_file_name in self.chap_file_names
         # ]
         self.chapters: list["chapter.Chapter"] = []
-        for chap_file_name in self.chap_file_names[:6]:
+        # for chap_file_name in self.chap_file_names[:6]:
+        for chap_file_name in tqdm(self.chap_file_names[:]) :
             self.chapters.append(
                 chapter.Chapter(
                     self.input_zip.read(chap_file_name),

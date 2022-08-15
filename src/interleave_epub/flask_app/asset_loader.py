@@ -111,7 +111,7 @@ def constants_loader():
     # false to hope we have cached some translations
     # it is mildly insane but Helsinki-NLP use hyphens so we also use hyphens
     gs["load_pipeline"] = {
-        "en-fr": False,
+        "en-fr": True,
         "fr-en": True,
     }
 
@@ -166,10 +166,15 @@ def cache_fol_loader():
     package_root_fol = this_file_fol.parent.parent.parent
     print(f"{package_root_fol=}")
 
-    cache_fol = package_root_fol / "cache"
+    cache_base_fol = package_root_fol / "cache"
+
+    file_names: dict[str, str] = gs["file_names"]
+    print(f"cached {file_names}")
+    this_book_name = "_".join([f"{s[:20]}" for s in file_names.values()])
+    cache_fol = cache_base_fol / this_book_name
     print(f"{cache_fol=}")
     if not cache_fol.exists():
-        cache_fol.mkdir()
+        cache_fol.mkdir(parents=True)
     gs["cache_fol"] = cache_fol
 
     epub_template_fol = package_root_fol / "assets" / "epub_template"
