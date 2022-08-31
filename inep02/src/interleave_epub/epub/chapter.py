@@ -2,9 +2,10 @@
 from typing import Literal
 
 from bs4 import BeautifulSoup
+from spacy.language import Language
 
-from interleave_epub.epub import epub
 from interleave_epub.epub.paragraph import Paragraph
+from interleave_epub.nlp.cached_pipe import TranslationPipelineCache
 
 
 class Chapter:
@@ -17,14 +18,16 @@ class Chapter:
         self,
         chap_content: bytes,
         chap_file_name: str,
-        epub: "epub.EPub",
+        lang: dict[str, str],
+        nlp: dict[str, Language],
+        pipe: dict[str, TranslationPipelineCache],
     ) -> None:
         """Initialize a chapter."""
         # save and extract misc info
         self.chap_file_name = chap_file_name
-        self.epub = epub
-        self.lang_orig: str = self.epub.lang_orig
-        self.lang_dest: str = self.epub.lang_dest
+        self.lang = lang
+        self.nlp = nlp
+        self.pipe = pipe
 
         # parse the soup and get the body
         self.soup = BeautifulSoup(chap_content, features="html.parser")
@@ -45,4 +48,11 @@ class Chapter:
         # self.paragraphs = [Paragraph(p_tag, self.nlp) for p_tag in self.all_p_tag]
         self.paragraphs: list[Paragraph] = []
         for p_tag in self.all_p_tag[:]:
-            self.paragraphs.append(Paragraph(p_tag, self))
+            self.paragraphs.append(
+                Paragraph(
+                    p_tag,
+                    self.lang,
+                    self.nlp,
+                    self.pipe,
+                )
+            )

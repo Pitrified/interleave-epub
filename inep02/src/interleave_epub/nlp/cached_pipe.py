@@ -40,7 +40,7 @@ class TranslationPipelineCache:
         if str_orig not in self.cached_tran:
 
             if self.pipe is None:
-                print(f"WARNING: no loaded pipeline and unknown sentence.")
+                print(f"WARNING: no loaded pipeline and unknown sentence: {str_orig}")
                 return "UNKNOWN SENTENCE"
 
             str_tran = self.pipe(str_orig)

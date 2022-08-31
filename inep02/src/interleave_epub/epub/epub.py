@@ -9,7 +9,7 @@ import zipfile
 from spacy.language import Language
 from tqdm import tqdm
 
-from interleave_epub.epub import chapter
+from interleave_epub.epub.chapter import Chapter
 from interleave_epub.epub.utils import VALID_CHAP_EXT
 from interleave_epub.nlp.cached_pipe import TranslationPipelineCache
 
@@ -22,7 +22,7 @@ class EPub:
         zipped_file: Union[str, IO[bytes], Path],
         epub_name: str,
         lang_orig: str,
-        lang_dest: str,
+        lang_trad: str,
         nlp: dict[str, Language],
         pipe: dict[str, TranslationPipelineCache],
     ) -> None:
@@ -33,27 +33,35 @@ class EPub:
 
         # save misc info
         self.epub_name = epub_name
-        self.lang_orig = lang_orig
-        self.lang_dest = lang_dest
+        self.lang = {
+            "orig": lang_orig,
+            "trad": lang_trad,
+            "ot_pair_h": f"{lang_orig}-{lang_trad}",  # orig trad pair hyphen
+            "ot_pair_u": f"{lang_orig}_{lang_trad}",  # orig trad pair underscore
+        }
         self.nlp = nlp
         self.pipe = pipe
 
         # analyze the contents and find the chapter file names
         self.zipped_file_paths = [Path(p) for p in self.input_zip.namelist()]
-        self.get_text_chapters()
-        self.chap_file_names = [str(p) for p in self.chap_file_paths]
+        self.find_text_chapters()
 
         # build a dict of chapters
-        self.chapters: dict[int, "chapter.Chapter"] = {}
-        for chap_id, chap_file_name in enumerate(tqdm(self.chap_file_names[:])):
-            self.chapters[chap_id] = chapter.Chapter(
+        self.chapters: dict[int, Chapter] = {}
+        for chap_id, chap_file_name in enumerate(tqdm(self.chap_file_names[:3])):
+            self.chapters[chap_id] = Chapter(
                 self.input_zip.read(chap_file_name),
                 chap_file_name,
-                self,
+                self.lang,
+                self.nlp,
+                self.pipe,
             )
 
-    def get_text_chapters(self) -> None:
-        """Find the chapters names that match a regex ``name{number}`` and sort on ``number``."""
+    def find_text_chapters(self) -> None:
+        """Find and sort the chapter paths and names.
+        
+        Look for paths that match a regex ``name{number}`` and sort on ``number``.
+        """
         # get the paths that are valid xhtml and similar
         self.chap_file_paths = [
             f for f in self.zipped_file_paths if f.suffix in VALID_CHAP_EXT
@@ -133,3 +141,4 @@ class EPub:
         self.chap_file_paths = [
             cid[0] for cid in sorted(chap_file_paths_id, key=lambda x: x[1])
         ]
+        self.chap_file_names = [str(p) for p in self.chap_file_paths]
