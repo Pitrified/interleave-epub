@@ -24,6 +24,8 @@ pandas = "^1.4.3"
 sklearn = "^0.0"
 matplotlib = "^3.5.3"
 tqdm = "^4.64.0"
+mypy = "^0.971"
+ipykernel = "^6.15.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
