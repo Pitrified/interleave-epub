@@ -5,6 +5,7 @@ from pathlib import Path
 
 from loguru import logger as lg
 import numpy as np
+from scipy.signal.windows import triang
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -87,6 +88,7 @@ class Aligner:
         self.sent_num_dst = self.ch_dst.sents_num[self.sent_which_align["dst"]]
         self.ratio = self.sent_num_src / self.sent_num_dst
 
+        #############################################################################
         # first iteration of matching: use the similarity matrix in a greedy way
         self.all_good_ids_src = []
         self.all_good_ids_dst_max = []
@@ -122,3 +124,86 @@ class Aligner:
         # fit a line on the good matches
         self.fit_coeff = np.polyfit(self.all_good_ids_src, self.all_good_ids_dst_max, 1)
         self.fit_func = np.poly1d(self.fit_coeff)
+
+        #############################################################################
+        # second iteration of matching: use the line to rescale the similarity
+
+        # build a triangular filter to give more relevance to sentences close to the fit
+        triang_height = 1
+        triang_filt = triang(win_len * 4 + 1) * triang_height + (1 - triang_height)
+        triang_center = win_len * 2 + 1
+
+        # all_max_rescaled = []
+        self.all_good_ids_src_rescaled = []
+        self.all_good_ids_dst_max_rescaled = []
+
+        # self.all_ids_src = []
+        self.all_ids_src = list(range(self.sent_num_src))
+        self.all_ids_dst_max = []
+        self.last_good_id_dst_max = 0
+
+        for id_src in range(self.sent_num_src):
+
+            # the similarity of this english sent to all the translated ones
+            this_sent_sim = self.sim[id_src]
+
+            # find the center rescaled because there are different number of sent in the two chapters
+            id_dst_ratio = int(id_src / self.ratio)
+
+            # the chopped similarity array, centered on id_dst_ratio
+            win_left = max(0, id_dst_ratio - win_len)
+            win_right = min(self.sent_num_dst, id_dst_ratio + win_len + 1)
+            some_sent_sim = this_sent_sim[win_left:win_right]
+
+            # the fit along the line
+            ii_fit = self.fit_func([id_src])[0]
+            ii_fit = int(ii_fit)
+            if ii_fit < 0:
+                ii_fit = 0
+            if ii_fit >= self.sent_num_dst:
+                ii_fit = self.sent_num_dst - 1
+            # print(f"{id_src=} {id_dst_ratio=} {ii_fit=}")
+
+            # chop the filter, centering the apex on the fitted line ii_fit
+            # the apex is in win_len*2+1
+            # the similarity is centered on id_dst_ratio
+            # the shifted filter is still win_len*2+1 long
+            delta_ii_fit = id_dst_ratio - ii_fit
+            filt_edge_left = triang_center + delta_ii_fit - win_len - 1
+            filt_edge_right = triang_center + delta_ii_fit + win_len + 0
+            triang_filt_shifted = triang_filt[filt_edge_left:filt_edge_right]
+
+            # chop the filter as well, if the similarity is near the border
+            if id_dst_ratio < win_len:
+                triang_filt_chop = triang_filt_shifted[win_len - id_dst_ratio :]
+            elif id_dst_ratio > self.sent_num_dst - (win_len + 1):
+                left_edge = self.sent_num_dst - (win_len + 1)
+                triang_filt_chop = triang_filt_shifted[: -(id_dst_ratio - left_edge)]
+            else:
+                triang_filt_chop = triang_filt_shifted
+
+            # print( f"{id_src=} {id_dst_ratio=} {id_dst_ratio-win_len=} {id_dst_ratio+win_len+1=} {len(some_sent_sim)=} {len(triang_filt_chop)=}")
+            assert len(triang_filt_chop) == len(some_sent_sim)
+
+            # rescale the similarity
+            sim_rescaled = some_sent_sim * triang_filt_chop
+
+            # find the max similarity on the rescaled sim array
+            id_dst_max_rescaled = sim_rescaled.argmax() + win_left
+            # all_max_rescaled.append(id_dst_max_rescaled)
+
+            # keep if both sents are long
+            if (
+                sent_len_src[id_src] > min_sent_len
+                and sent_len_dst[id_dst_max] > min_sent_len
+            ):
+                self.all_good_ids_src_rescaled.append(id_src)
+                self.all_good_ids_dst_max_rescaled.append(id_dst_max_rescaled)
+                # update the last max we saw
+                self.last_good_id_dst_max = id_dst_max_rescaled
+
+            # save all matches id_src-max
+            # self.all_ids_src.append(id_src)
+            self.all_ids_dst_max.append(int(self.last_good_id_dst_max))
+
+        # return self.all_ids_src, self.all_ids_dst_max

@@ -48,7 +48,7 @@ class Chapter:
         # build the list of Paragraphs
         # self.paragraphs = [Paragraph(p_tag, self.nlp) for p_tag in self.all_p_tag]
         self.paragraphs: list[Paragraph] = []
-        for p_tag in self.all_p_tag[:5]:
+        for p_tag in self.all_p_tag[:]:
             self.paragraphs.append(
                 Paragraph(
                     p_tag,

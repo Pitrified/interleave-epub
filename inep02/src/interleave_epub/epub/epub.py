@@ -48,7 +48,7 @@ class EPub:
 
         # build a dict of chapters
         self.chapters: dict[int, Chapter] = {}
-        for chap_id, chap_file_name in enumerate(tqdm(self.chap_file_names[:3])):
+        for chap_id, chap_file_name in enumerate(tqdm(self.chap_file_names[:1])):
             self.chapters[chap_id] = Chapter(
                 self.input_zip.read(chap_file_name),
                 chap_file_name,
