@@ -207,3 +207,22 @@ class Aligner:
             self.all_ids_dst_max.append(int(self.last_good_id_dst_max))
 
         # return self.all_ids_src, self.all_ids_dst_max
+
+    def compute_ooo_ids(self):
+        """Find the non monothonic ids_dst_max."""
+        is_ooo_flattened = []
+        for id_src, id_dst_max in zip(self.all_ids_src, self.all_ids_dst_max):
+            # check to the left if you can
+            if id_src > 0:
+                ooo_left = id_dst_max < self.all_ids_dst_max[id_src - 1]
+            else:
+                ooo_left = False
+            # check to the right if you can
+            if id_src < len(self.all_ids_dst_max) - 1:
+                ooo_right = id_dst_max > self.all_ids_dst_max[id_src + 1]
+            else:
+                ooo_right = False
+            # if any side is ooo, mark it
+            ooo = ooo_right or ooo_left
+            # if ooo: lg.debug(f"{id_src} {id_dst_max}")
+            is_ooo_flattened.append(ooo)
