@@ -176,8 +176,9 @@ class InterleaverInteractive:
         # base cache folder for all alignment
         cache_fol = get_package_fol(which_fol="align_cache")
 
-        # create a folder for this pair of books
+        # create a folder for this pair of books, removing spaces
         pair_name = "_".join([f"{s.epub_name[:20]}" for s in self.epubs.values()])
+        pair_name = "".join(pair_name.split())
         self.align_cache_fol = cache_fol / pair_name
         if not self.align_cache_fol.exists():
             self.align_cache_fol.mkdir(parents=True)
