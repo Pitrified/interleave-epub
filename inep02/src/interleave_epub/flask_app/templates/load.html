@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+<!-- https://github.com/memudualimatou/INSURANCE-CHARGES-WEB-APPLICATION/blob/main/templates/index.html -->
+
+{% block container_content %}
+<h1>Load ep</h1>
+
+<form name="lang_tag_src" action="{{url_for('load_ep')}}" method="post">
+    <select name="lang_tag_src_select" class="form-select" aria-label="Default select example">
+        <!-- <option selected>Select the src lang tag:</option> -->
+        {% for lt in lts_list %}
+        <option {% if lt==lt_src_sel %} selected {% else %} {% endif %} value="{{ lt }}">{{ lt }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Select src lang" class="btn btn-info">
+</form>
+
+<a href="{{ url_for('load_ep') }}" class="btn btn-info">Align</a>
+
+
+<form action="{{url_for('load_ep')}}" method="post">
+    <select name="comp_select" class="Input">
+        {% for lt in lts_list %}
+        <option value="{{ lt }}">{{ lt }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="pred-btn"> Predict </button>
+</form>
+
+{% endblock %}
