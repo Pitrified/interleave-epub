@@ -1,10 +1,12 @@
 """Align to list of sentences."""
 
 import json
+from math import isnan
 from pathlib import Path
 
 from loguru import logger as lg
 import numpy as np
+import pandas as pd
 from scipy.signal.windows import triang
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -40,19 +42,35 @@ class Aligner:
 
         align_info_name = f"info_align_{self.ch_id_pair_str}.json"
         self.match_info_path["align"] = self.align_cache_fol / align_info_name
-        sim_name = f"info_sim_{self.ch_id_pair_str}.npy"
-        self.match_info_path["sim"] = self.align_cache_fol / sim_name
+        # sim_name = f"info_sim_{self.ch_id_pair_str}.npy"
+        # self.match_info_path["sim"] = self.align_cache_fol / sim_name
+
+        # compute similarity and the alignment even if we have a cached version,
+        # we want all the other class variables to be set
+        self.compute_similarity()
+        self.align_auto()
 
         # if we have an alignment already computed, load it
         # unless we are forcing a realignment
+        # the only thing we change are the matching dst ids
         if (
             not force_align
             and self.match_info_path["align"].exists()
-            and self.match_info_path["sim"].exists()
+            # and self.match_info_path["sim"].exists()
         ):
             lg.info("Found match info at {}", self.match_info_path["align"])
-            self.match_info = json.loads(self.match_info_path["align"].read_text())
-            # TODO reload the things
+            align_info = json.loads(self.match_info_path["align"].read_text())
+            self.all_ids_dst_max: list[int] = align_info["all_ids_dst_max"]
+            # TODO reload fixed_src_ids as well?
+
+        # use the possibly updated matching to compute ooo ids
+        self.compute_ooo_ids()
+        self.interpolate_ooo_ids()
+
+        # set up the interactive parts of the Aligner
+        # src ids we have set manually, to be skipped when searching for ooo ids
+        self.fixed_ids_src: list[int] = []
+        self.find_next_valid_ooo()
 
     def compute_similarity(self):
         """Compute the similarity between the two list of sentences."""
@@ -67,8 +85,6 @@ class Aligner:
         )
         # compute the similarity
         self.sim: np.ndarray = cosine_similarity(enc_orig_src, enc_tran_dst)
-        # TODO save the thing
-        np.save(self.match_info_path["sim"], self.sim)
 
     def align_auto(
         self,
@@ -206,11 +222,9 @@ class Aligner:
             # self.all_ids_src.append(id_src)
             self.all_ids_dst_max.append(int(self.last_good_id_dst_max))
 
-        # return self.all_ids_src, self.all_ids_dst_max
-
     def compute_ooo_ids(self):
         """Find the non monothonic ids_dst_max."""
-        is_ooo_flattened = []
+        self.is_ooo_flattened = []
         for id_src, id_dst_max in zip(self.all_ids_src, self.all_ids_dst_max):
             # check to the left if you can
             if id_src > 0:
@@ -225,4 +239,35 @@ class Aligner:
             # if any side is ooo, mark it
             ooo = ooo_right or ooo_left
             # if ooo: lg.debug(f"{id_src} {id_dst_max}")
-            is_ooo_flattened.append(ooo)
+            self.is_ooo_flattened.append(ooo)
+
+    def interpolate_ooo_ids(self):
+        """Remove the ooo matches and interpolate them.
+
+        These will be the first guess used to present the paragraph options to the user.
+        """
+        # interpolate the values for the ooo guesses
+        self.all_ids_dst_interpolate = pd.Series(self.all_ids_dst_max)
+        self.all_ids_dst_interpolate[self.is_ooo_flattened] = np.nan
+        self.all_ids_dst_interpolate.interpolate(inplace=True)
+
+    def find_next_valid_ooo(self):
+        """Find the first ooo src id that has not been fixed yet."""
+        # find the first ooo src id
+        is_ooo = self.is_ooo_flattened.copy()
+        for fixed_id_src in self.fixed_ids_src:
+            is_ooo[fixed_id_src] = False
+        if True in is_ooo:
+            self.curr_id_src = is_ooo.index(True)
+        else:
+            self.curr_id_src = 0
+            lg.info(f"Finished aligning.")
+
+        # update the best guess for dst id
+        id_dst_interpolate_maybe = self.all_ids_dst_interpolate[self.curr_id_src]
+        print(f"{id_dst_interpolate_maybe} {type(id_dst_interpolate_maybe)}")
+        if isnan(id_dst_interpolate_maybe):
+            lg.warning(f"{self.curr_id_src=} {id_dst_interpolate_maybe=} is nan")
+            self.curr_id_dst_interpolate = 0
+        else:
+            self.curr_id_dst_interpolate = int(id_dst_interpolate_maybe)
