@@ -76,6 +76,7 @@ class Chapter:
         self.sents_doc: dict[str, list[str]] = {}
         self.sents_psid: dict[str, list[tuple[int, int]]] = {}
         self.sents_len: dict[str, list[int]] = {}
+        self.sents_num: dict[str, int] = {}
 
         # https://github.com/python/mypy/issues/9230#issuecomment-789230275
         for which_sent in get_args(orig_or_trad):
@@ -88,3 +89,4 @@ class Chapter:
                 self.sents_doc[which_sent].append(sent)
                 self.sents_psid[which_sent].append(sent_psid)
                 self.sents_len[which_sent].append(len(sent))
+            self.sents_num[which_sent] = len(self.sents_text[which_sent])
