@@ -68,6 +68,7 @@ class InterleaverInteractive:
         """Add nlp things to the interleaver."""
         if self.has_nlp_loaded:
             return
+        lg.debug("Loading NLP tools.")
 
         # load the spacy models
         self.nlp = {
@@ -107,6 +108,7 @@ class InterleaverInteractive:
             )
             for lth in self.lts_ph
         }
+        lg.debug("Loaded HuggingFace models.")
 
         # load the sentence transformer
         # TODO: should set which side to use src or dst
@@ -124,6 +126,7 @@ class InterleaverInteractive:
             "src": "trad",
             "dst": "orig",
         }
+        lg.debug("Loaded SentenceTransformer model.")
 
         self.has_nlp_loaded = True
 
@@ -150,6 +153,7 @@ class InterleaverInteractive:
             lt_trad = self.sd_to_lt["src"]
 
         # load the epub
+        lg.debug(f"Loading {lt_orig} book.")
         self.epubs[which_ep] = EPub(
             ep_path,
             ep_name,

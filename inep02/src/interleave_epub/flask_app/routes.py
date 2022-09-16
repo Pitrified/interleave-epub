@@ -1,10 +1,12 @@
 """Routes for the flask app."""
 
+from pathlib import Path
+
 from flask import redirect, render_template, request, url_for
 from loguru import logger as lg
 
-from interleave_epub.flask_app import app
-from interleave_epub.flask_app.render import render_load
+from interleave_epub.flask_app import app, ii
+from interleave_epub.flask_app.render import render_align, render_load
 from interleave_epub.flask_app.utils import flatten_multidict, permanentize_form_file
 
 
@@ -44,8 +46,8 @@ def learn01():
 def load_ep():
     """Render the page to pick the languages and load the epubs."""
     # parse POST request
+    print(f"{request=}")
     if request.method == "POST":
-        print(f"{request=}")
         form_data = flatten_multidict(request.form)
         print(f"{form_data=}")
         files_data = flatten_multidict(request.files)
@@ -60,9 +62,29 @@ def load_ep():
         # if some file is bad render the load page again
         if file_name_src == "" or file_name_dst == "":
             lg.warning(f"Empty filenames.")
-            return render_load()
+            # we cheat for maximum laziness
+            epub_folder_path = Path("~").expanduser() / "snippet" / "datasets" / "ebook"
+            epub_paths = {
+                "fr": epub_folder_path
+                / "Gaston_Leroux_-_Le_Mystere_de_la_chambre_jaune.epub",
+                "en": epub_folder_path / "mystery_yellow_room.epub",
+            }
+            file_name_src = "ChambreJaune"
+            file_name_dst = "YellowRoom"
+            file_io_src = epub_paths["fr"]
+            file_io_dst = epub_paths["en"]
+            # return render_load()
 
-        # TODO: add the books to the Interleaver lol
+        # set the lang tags
+        ii.set_lang_tag(lt_src, "src")
+        ii.set_lang_tag(lt_dst, "dst")
+
+        # load the models
+        ii.load_nlp()
+
+        # load the books
+        ii.add_book(file_io_src, "src", file_name_src)
+        ii.add_book(file_io_dst, "dst", file_name_dst)
 
         # go forth and align
         return redirect(url_for("align"))
@@ -73,4 +95,12 @@ def load_ep():
 @app.route("/align", methods=["GET", "POST"])
 def align():
     """Align two epubs."""
-    return "Align."
+    an_epub = ii.epubs["src"]
+    a_chap = an_epub.chapters[0]
+    a_par = a_chap.paragraphs[0]
+    lg.debug(f"{a_par=}")
+
+    # TODO: parse the request/url
+    ii.align_auto()
+
+    return render_align(ii)

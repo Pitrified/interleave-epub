@@ -74,6 +74,7 @@ class Aligner:
 
     def compute_similarity(self):
         """Compute the similarity between the two list of sentences."""
+        lg.debug(f"Computing similarity.")
         # encode the sentences
         enc_orig_src = sentence_encode_np(
             self.sent_transformer[self.lt_sent_tra],
@@ -265,7 +266,6 @@ class Aligner:
 
         # update the best guess for dst id
         id_dst_interpolate_maybe = self.all_ids_dst_interpolate[self.curr_id_src]
-        print(f"{id_dst_interpolate_maybe} {type(id_dst_interpolate_maybe)}")
         if isnan(id_dst_interpolate_maybe):
             lg.warning(f"{self.curr_id_src=} {id_dst_interpolate_maybe=} is nan")
             self.curr_id_dst_interpolate = 0
