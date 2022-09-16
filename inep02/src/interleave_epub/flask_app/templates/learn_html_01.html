@@ -138,7 +138,7 @@
             <div class="col-md-auto">
                 <select name="comp_select" class="form-select">
                     {% for lt in lts_list %}
-                    <option {% if lt==lt_src_sel %} selected {% else %} {% endif %} value="{{ lt }}">
+                    <option {% if lt==lt_src_default %} selected {% else %} {% endif %} value="{{ lt }}">
                         {{ lt }}
                     </option>
                     {% endfor %}
@@ -150,7 +150,7 @@
             <div class="col-md-auto">
                 <select name="comp_select" class="form-select">
                     {% for lt in lts_list %}
-                    <option {% if lt==lt_dst_sel %} selected {% else %} {% endif %} value="{{ lt }}">
+                    <option {% if lt==lt_dst_default %} selected {% else %} {% endif %} value="{{ lt }}">
                         {{ lt }}
                     </option>
                     {% endfor %}
@@ -194,7 +194,7 @@
                 <label class="form-label" for="comp_select_src">Language:</label>
                 <select name="comp_select_src" class="form-select">
                     {% for lt in lts_list %}
-                    <option {% if lt.tag==lt_src_sel %} selected {% else %} {% endif %} value="{{ lt.tag }}">
+                    <option {% if lt.tag==lt_src_default %} selected {% else %} {% endif %} value="{{ lt.tag }}">
                         {{ lt.name }}
                     </option>
                     {% endfor %}
@@ -226,7 +226,7 @@
                 <label class="form-label" for="comp_select_dst">Language:</label>
                 <select name="comp_select_dst" class="form-select">
                     {% for lt in lts_list %}
-                    <option {% if lt.tag==lt_dst_sel %} selected {% else %} {% endif %} value="{{ lt.tag }}">
+                    <option {% if lt.tag==lt_dst_default %} selected {% else %} {% endif %} value="{{ lt.tag }}">
                         {{ lt.name }}
                     </option>
                     {% endfor %}

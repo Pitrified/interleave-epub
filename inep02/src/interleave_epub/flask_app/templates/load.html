@@ -25,13 +25,13 @@
             </div> -->
             <!-- src file input -->
             <div class="col">
-                <input type="file" name="file-src" accept=".epub" class="form-control">
+                <input type="file" name="file_src" accept=".epub" class="form-control">
             </div>
             <!-- src lt select -->
             <div class="col-md-auto">
-                <select name="comp_select_src" class="form-select">
+                <select name="lt_src" class="form-select">
                     {%- for lt in lts_list %}
-                    <option {% if lt.tag==lt_src_sel %}selected {% else %}{% endif %}value="{{ lt.tag }}">
+                    <option {% if lt.tag==lt_src_default %}selected {% else %}{% endif %}value="{{ lt.tag }}">
                         {{ lt.name }}
                     </option>
                     {%- endfor %}
@@ -52,13 +52,13 @@
             </div> -->
             <!-- dst file input -->
             <div class="col">
-                <input type="file" name="file-dst" accept=".epub" class="form-control">
+                <input type="file" name="file_dst" accept=".epub" class="form-control">
             </div>
             <!-- dst lt select -->
             <div class="col-md-auto align-self-center">
-                <select name="comp_select_dst" class="form-select">
+                <select name="lt_dst" class="form-select">
                     {%- for lt in lts_list %}
-                    <option {% if lt.tag==lt_dst_sel %}selected {% else %}{% endif %}value="{{ lt.tag }}">
+                    <option {% if lt.tag==lt_dst_default %}selected {% else %}{% endif %}value="{{ lt.tag }}">
                         {{ lt.name }}
                     </option>
                     {%- endfor %}

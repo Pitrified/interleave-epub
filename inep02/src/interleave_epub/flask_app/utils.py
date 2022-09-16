@@ -23,3 +23,9 @@ def fig2imgb64str(fig: Figure) -> str:
     pngImageB64String += base64.b64encode(pngImage.getvalue()).decode("utf8")
 
     return pngImageB64String
+
+
+# def flatten_multidict(md: ImmutableMultiDict) -> dict:
+def flatten_multidict(md) -> dict:
+    """Flatten a multi dict, hoping that there are no key conflicts."""
+    return {k: md[k] for k in md}

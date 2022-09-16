@@ -3,6 +3,12 @@
 from flask import render_template, request
 
 from interleave_epub.flask_app import app
+from interleave_epub.flask_app.utils import flatten_multidict
+from interleave_epub.interleave.constants import (
+    lt_dst_default,
+    lt_options,
+    lt_src_default,
+)
 
 
 @app.route("/")
@@ -25,15 +31,15 @@ def learn01():
         {"tag": "en", "name": "English"},
         {"tag": "fr", "name": "French"},
     ]
-    lt_src_sel = "fr"
-    lt_dst_sel = "en"
+    lt_src_default = "fr"
+    lt_dst_default = "en"
 
     return render_template(
         "learn_html_01.html",
         title="Home",
         lts_list=lts_list,
-        lt_src_sel=lt_src_sel,
-        lt_dst_sel=lt_dst_sel,
+        lt_src_default=lt_src_default,
+        lt_dst_default=lt_dst_default,
     )
 
 
@@ -43,21 +49,18 @@ def load_ep():
     # parse POST request
     if request.method == "POST":
         print(f"{request=}")
-        print(f"{request.form=}")
-        print(f"{request.files=}")
-        # request.form['manu']
+        form_data = flatten_multidict(request.form)
+        print(f"{form_data=}")
+        files_data = flatten_multidict(request.files)
+        print(f"{files_data=}")
 
-    lts_list = [
-        {"tag": "auto", "name": "Auto detect"},
-        {"tag": "en", "name": "English"},
-        {"tag": "fr", "name": "French"},
-    ]
-    lt_src_sel = "fr"
-    lt_dst_sel = "en"
+        # parse the data
+        # if everything is ok, go to /align
+        # return redirect(url_for("epub_load"))
 
     return render_template(
         "load.html",
-        lts_list=lts_list,
-        lt_src_sel=lt_src_sel,
-        lt_dst_sel=lt_dst_sel,
+        lts_list=lt_options,
+        lt_src_default=lt_src_default,
+        lt_dst_default=lt_dst_default,
     )

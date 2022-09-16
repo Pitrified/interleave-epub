@@ -3,6 +3,9 @@
 
 from pathlib import Path
 
+################################################################################
+# NLP
+
 spa_model_names = {
     # "en": "en_core_web_md",
     # "fr": "fr_core_news_md",
@@ -22,3 +25,15 @@ hug_model_name_tmpl = "Helsinki-NLP/opus-mt-{}"
 sent_model_names = {
     "en": "sentence-transformers/all-MiniLM-L6-v2",
 }
+
+################################################################################
+# default values for the view
+
+# language tags
+lt_options = [
+    {"tag": "auto", "name": "Auto detect"},
+    {"tag": "en", "name": "English"},
+    {"tag": "fr", "name": "French"},
+]
+lt_src_default = "fr"
+lt_dst_default = "en"
