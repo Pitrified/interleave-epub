@@ -5,6 +5,8 @@ import io
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
 
 
 def fig2imgb64str(fig: Figure) -> str:
@@ -29,3 +31,21 @@ def fig2imgb64str(fig: Figure) -> str:
 def flatten_multidict(md) -> dict:
     """Flatten a multi dict, hoping that there are no key conflicts."""
     return {k: md[k] for k in md}
+
+
+def permanentize_form_file(uploaded_file: FileStorage) -> tuple[str, io.BytesIO]:
+    """Save to memory the content of the SpooledTemporaryFile."""
+    file_name = uploaded_file.filename
+    file_name = file_name if file_name is not None else ""
+    file_name = secure_filename(file_name)
+
+    if file_name == "":
+        return file_name, io.BytesIO()
+
+    # uploaded_file.stream is a SpooledTemporaryFile:
+    # read the contents as bytes and permanentize them
+    file_bytes_content = uploaded_file.stream.read()
+    # convert the bytes back to a stream, now linked to permanent data
+    file_io_stream = io.BytesIO(file_bytes_content)
+
+    return file_name, file_io_stream
