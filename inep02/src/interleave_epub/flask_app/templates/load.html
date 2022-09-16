@@ -6,18 +6,23 @@
     <form method="POST" action="{{ url_for('load_ep') }}" enctype="multipart/form-data">
 
         <!-- header -->
-        <div class="row mb-4">
+        <div class="row mb-5">
             <div class="col d-flex justify-content-center">
-                <h1>Select lang and load b</h1>
+                <h1>Load books and select languages</h1>
             </div>
         </div>
 
         <!-- src input -->
+        <div class="row mb-3">
+            <div class="col d-flex justify-content-center">
+                <h3>Source book:</h3>
+            </div>
+        </div>
         <div class="row mb-4">
             <!-- src label -->
-            <div class="col-md-1 align-self-center">
+            <!-- <div class="col-md-1 align-self-center">
                 <span style="font-size: large; font-weight: bold;">Src:</span>
-            </div>
+            </div> -->
             <!-- src file input -->
             <div class="col">
                 <input type="file" name="file-src" accept=".epub" class="form-control">
@@ -35,11 +40,16 @@
         </div>
 
         <!-- dst input -->
+        <div class="row mb-3">
+            <div class="col d-flex justify-content-center">
+                <h3>Destination book:</h3>
+            </div>
+        </div>
         <div class="row mb-4">
             <!-- dst label -->
-            <div class="col-md-1 align-self-center">
+            <!-- <div class="col-md-1 align-self-center">
                 <span style="font-size: large; font-weight: bold;">Dst:</span>
-            </div>
+            </div> -->
             <!-- dst file input -->
             <div class="col">
                 <input type="file" name="file-dst" accept=".epub" class="form-control">
@@ -57,7 +67,7 @@
         </div>
 
         <!-- submit button -->
-        <div class="row mb-4">
+        <div class="row mb-4 mt-2">
             <div class="col d-flex justify-content-center">
                 <input type="submit" value="Align" class="btn btn-info">
             </div>
