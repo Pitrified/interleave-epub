@@ -12,6 +12,12 @@ def index():
     return render_template("index.html", title="Home")
 
 
+@app.route("/learn01")
+def learn01():
+    """Render the learn 01 page, to learn the first thing."""
+    return render_template("learn_html_01.html", title="Home")
+
+
 @app.route("/load", methods=["GET", "POST"])
 def load_ep():
     """Render the page to pick the languages and load the epubs."""
