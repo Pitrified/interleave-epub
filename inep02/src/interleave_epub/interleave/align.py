@@ -3,6 +3,7 @@
 import json
 from math import isnan
 from pathlib import Path
+from timeit import default_timer
 
 from loguru import logger as lg
 import numpy as np
@@ -38,26 +39,33 @@ class Aligner:
         self.ch_id_pair_str = ch_id_pair_str
         self.align_cache_fol = align_cache_fol
 
-        self.match_info_path = {}
+        self.match_info_path: dict[str, Path] = {}
 
         align_info_name = f"info_align_{self.ch_id_pair_str}.json"
         self.match_info_path["align"] = self.align_cache_fol / align_info_name
-        # sim_name = f"info_sim_{self.ch_id_pair_str}.npy"
-        # self.match_info_path["sim"] = self.align_cache_fol / sim_name
+        sim_name = f"info_sim_{self.ch_id_pair_str}.npy"
+        self.match_info_path["sim"] = self.align_cache_fol / sim_name
+
+        # use cached res if force align is false and all the paths exist
+        use_cached_res = (
+            not force_align
+            and self.match_info_path["align"].exists()
+            and self.match_info_path["sim"].exists()
+        )
 
         # compute similarity and the alignment even if we have a cached version,
         # we want all the other class variables to be set
-        self.compute_similarity()
+        if use_cached_res:
+            self.sim = np.load(self.match_info_path["sim"])
+        else:
+            self.compute_similarity()
+
         self.align_auto()
 
         # if we have an alignment already computed, load it
         # unless we are forcing a realignment
         # the only thing we change are the matching dst ids
-        if (
-            not force_align
-            and self.match_info_path["align"].exists()
-            # and self.match_info_path["sim"].exists()
-        ):
+        if use_cached_res:
             lg.info("Found match info at {}", self.match_info_path["align"])
             align_info = json.loads(self.match_info_path["align"].read_text())
             self.all_ids_dst_max: list[int] = align_info["all_ids_dst_max"]
@@ -75,6 +83,7 @@ class Aligner:
     def compute_similarity(self):
         """Compute the similarity between the two list of sentences."""
         lg.debug(f"Computing similarity.")
+        t0 = default_timer()
         # encode the sentences
         enc_orig_src = sentence_encode_np(
             self.sent_transformer[self.lt_sent_tra],
@@ -86,6 +95,9 @@ class Aligner:
         )
         # compute the similarity
         self.sim: np.ndarray = cosine_similarity(enc_orig_src, enc_tran_dst)
+        lg.debug(f"Computing similarity: done in {default_timer()-t0:.2f}.")
+        # save the similarity
+        np.save(self.match_info_path["sim"], self.sim)
 
     def align_auto(
         self,
@@ -223,6 +235,8 @@ class Aligner:
             # self.all_ids_src.append(id_src)
             self.all_ids_dst_max.append(int(self.last_good_id_dst_max))
 
+        self.save_align_state()
+
     def compute_ooo_ids(self):
         """Find the non monothonic ids_dst_max."""
         self.is_ooo_flattened = []
@@ -271,3 +285,10 @@ class Aligner:
             self.curr_id_dst_interpolate = 0
         else:
             self.curr_id_dst_interpolate = int(id_dst_interpolate_maybe)
+
+    def save_align_state(self):
+        """Write the current alignment state."""
+        align_info = {
+            "all_ids_dst_max": self.all_ids_dst_max,
+        }
+        self.match_info_path["align"].write_text(json.dumps(align_info, indent=4))
