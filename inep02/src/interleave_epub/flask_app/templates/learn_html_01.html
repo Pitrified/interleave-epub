@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block container_content %}
 
+
 <!-- https://getbootstrap.com/docs/4.3/layout/overview/ -->
 <!-- https://mdbootstrap.com/docs/standard/layout/grid/ -->
-<div class="container-lg">
+<div class="container-lg mb-4">
     <div class="row">
         <div class="col-md">
             One of three columns
@@ -18,7 +19,7 @@
 </div>
 
 <!-- https://mdbootstrap.com/docs/standard/forms/overview/ -->
-<div class="container-md" style="max-width: 500px">
+<div class="container-md mb-4" style="max-width: 500px">
     <form>
         <!-- Email input -->
         <!-- mb-4 is to have margin bottom: https://mdbootstrap.com/docs/standard/utilities/spacing/ -->
@@ -87,6 +88,159 @@
                 <i class="fab fa-github"></i>
             </button>
         </div>
+    </form>
+</div>
+
+<hr />
+
+<div class="container">
+    <div class="row">
+        <div class="col">
+            1 of 2
+        </div>
+        <div class="col">
+            2 of 2
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            1 of 3
+        </div>
+        <div class="col">
+            2 of 3
+        </div>
+        <div class="col">
+            3 of 3
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<div class="container mb-4">
+    <!-- <form method="POST" action="{{ url_for('load_ep') }}" enctype="multipart/form-data"> -->
+    <form method="POST" action="{{ url_for('learn01') }}" enctype="multipart/form-data">
+        <div class="row mb-4">
+            <div class="col-md-auto">Select src:</div>
+            <div class="col">
+                <!-- <label for="file-src" class="btn">Select src file</label> -->
+                <input type="file" name="file-src" accept=".epub" class="form-control">
+            </div>
+            <div class="col-md-auto">Select dst:</div>
+            <div class="col">
+                <input type="file" name="file-dst" accept=".epub" class="form-control">
+            </div>
+        </div>
+        <div class="row mb-4">
+
+            <!-- src lt select -->
+            <div class="col">Select src:</div>
+            <div class="col-md-auto">
+                <select name="comp_select" class="form-select">
+                    {% for lt in lts_list %}
+                    <option {% if lt==lt_src_sel %} selected {% else %} {% endif %} value="{{ lt }}">
+                        {{ lt }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- dst lt select -->
+            <div class="col">Select dst:</div>
+            <div class="col-md-auto">
+                <select name="comp_select" class="form-select">
+                    {% for lt in lts_list %}
+                    <option {% if lt==lt_dst_sel %} selected {% else %} {% endif %} value="{{ lt }}">
+                        {{ lt }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+        </div>
+        <input type="submit" value="Submit" class="btn btn-info">
+    </form>
+</div>
+
+<div class="container mb-4" style="max-width: 700px">
+    <!-- <form method="POST" action="{{ url_for('load_ep') }}" enctype="multipart/form-data"> -->
+    <form method="POST" action="{{ url_for('learn01') }}" enctype="multipart/form-data">
+
+        <!-- header -->
+        <div class="row mb-4">
+            <div class="col d-flex justify-content-center">
+                <h1>Select lang and load b</h1>
+            </div>
+        </div>
+
+        <!-- src input -->
+        <!-- <div class="row mb-4">
+            <div class="col d-flex justify-content-center">
+                <h3>Src:</h3>
+            </div>
+        </div> -->
+        <div class="row mb-4">
+            <!-- src label -->
+            <div class="col-md-auto align-self-center">
+                <span style="font-size: large; font-weight: bold;">Src:</span>
+            </div>
+            <!-- src file input -->
+            <div class="col">
+                <label class="form-label" for="file-src">File:</label>
+                <input type="file" name="file-src" accept=".epub" class="form-control">
+            </div>
+            <!-- src lt select -->
+            <div class="col-md-auto">
+                <label class="form-label" for="comp_select_src">Language:</label>
+                <select name="comp_select_src" class="form-select">
+                    {% for lt in lts_list %}
+                    <option {% if lt.tag==lt_src_sel %} selected {% else %} {% endif %} value="{{ lt.tag }}">
+                        {{ lt.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- dst input -->
+        <!-- <div class="row">
+            <div class="col d-flex justify-content-center">
+            <div class="col">
+                <h3>Dst:</h3>
+            </div>
+        </div> -->
+        <div class="row mb-4">
+            <!-- # src label -->
+            <!-- <div class="col-md-auto align-self-center">Src:</div> -->
+            <!-- <label for="file-dst" class="col-md-auto col-form-label">Src:</label> -->
+            <div class="col-md-auto align-self-center">
+                <span style="font-size: large; font-weight: bold;">Dst:</span>
+            </div>
+            <!-- src file input -->
+            <div class="col">
+                <label class="form-label" for="file-dst">File:</label>
+                <input type="file" name="file-dst" accept=".epub" class="form-control">
+            </div>
+            <!-- dst lt select -->
+            <div class="col-md-auto align-self-center">
+                <label class="form-label" for="comp_select_dst">Language:</label>
+                <select name="comp_select_dst" class="form-select">
+                    {% for lt in lts_list %}
+                    <option {% if lt.tag==lt_dst_sel %} selected {% else %} {% endif %} value="{{ lt.tag }}">
+                        {{ lt.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- submit button -->
+        <div class="row mb-4">
+            <div class="col d-flex justify-content-center">
+                <input type="submit" value="Align" class="btn btn-info">
+            </div>
+        </div>
+
     </form>
 </div>
 

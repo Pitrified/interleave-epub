@@ -12,10 +12,29 @@ def index():
     return render_template("index.html", title="Home")
 
 
-@app.route("/learn01")
+@app.route("/learn01", methods=["GET", "POST"])
 def learn01():
     """Render the learn 01 page, to learn the first thing."""
-    return render_template("learn_html_01.html", title="Home")
+    # parse POST request
+    if request.method == "POST":
+        print(f"{request=}")
+        print(f"{request.form=}")
+        print(f"{request.files=}")
+
+    lts_list = [
+        {"tag": "en", "name": "English"},
+        {"tag": "fr", "name": "French"},
+    ]
+    lt_src_sel = "fr"
+    lt_dst_sel = "en"
+
+    return render_template(
+        "learn_html_01.html",
+        title="Home",
+        lts_list=lts_list,
+        lt_src_sel=lt_src_sel,
+        lt_dst_sel=lt_dst_sel,
+    )
 
 
 @app.route("/load", methods=["GET", "POST"])
