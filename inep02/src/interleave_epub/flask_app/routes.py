@@ -47,11 +47,17 @@ def load_ep():
         print(f"{request.files=}")
         # request.form['manu']
 
-    lts_list = ["en", "fr", "it"]
+    lts_list = [
+        {"tag": "auto", "name": "Auto detect"},
+        {"tag": "en", "name": "English"},
+        {"tag": "fr", "name": "French"},
+    ]
     lt_src_sel = "fr"
+    lt_dst_sel = "en"
 
     return render_template(
         "load.html",
         lts_list=lts_list,
         lt_src_sel=lt_src_sel,
+        lt_dst_sel=lt_dst_sel,
     )

@@ -1,29 +1,69 @@
 {% extends "base.html" %}
-<!-- https://github.com/memudualimatou/INSURANCE-CHARGES-WEB-APPLICATION/blob/main/templates/index.html -->
 
 {% block container_content %}
-<h1>Load ep</h1>
 
-<form name="lang_tag_src" action="{{url_for('load_ep')}}" method="post">
-    <select name="lang_tag_src_select" class="form-select" aria-label="Default select example">
-        <!-- <option selected>Select the src lang tag:</option> -->
-        {% for lt in lts_list %}
-        <option {% if lt==lt_src_sel %} selected {% else %} {% endif %} value="{{ lt }}">{{ lt }}</option>
-        {% endfor %}
-    </select>
-    <input type="submit" value="Select src lang" class="btn btn-info">
-</form>
+<div class="container mb-4" style="max-width: 700px; margin-top: 200px;">
+    <form method="POST" action="{{ url_for('load_ep') }}" enctype="multipart/form-data">
 
-<a href="{{ url_for('load_ep') }}" class="btn btn-info">Align</a>
+        <!-- header -->
+        <div class="row mb-4">
+            <div class="col d-flex justify-content-center">
+                <h1>Select lang and load b</h1>
+            </div>
+        </div>
 
+        <!-- src input -->
+        <div class="row mb-4">
+            <!-- src label -->
+            <div class="col-md-1 align-self-center">
+                <span style="font-size: large; font-weight: bold;">Src:</span>
+            </div>
+            <!-- src file input -->
+            <div class="col">
+                <input type="file" name="file-src" accept=".epub" class="form-control">
+            </div>
+            <!-- src lt select -->
+            <div class="col-md-auto">
+                <select name="comp_select_src" class="form-select">
+                    {%- for lt in lts_list %}
+                    <option {% if lt.tag==lt_src_sel %}selected {% else %}{% endif %}value="{{ lt.tag }}">
+                        {{ lt.name }}
+                    </option>
+                    {%- endfor %}
+                </select>
+            </div>
+        </div>
 
-<form action="{{url_for('load_ep')}}" method="post">
-    <select name="comp_select" class="Input">
-        {% for lt in lts_list %}
-        <option value="{{ lt }}">{{ lt }}</option>
-        {% endfor %}
-    </select>
-    <button type="submit" class="pred-btn"> Predict </button>
-</form>
+        <!-- dst input -->
+        <div class="row mb-4">
+            <!-- dst label -->
+            <div class="col-md-1 align-self-center">
+                <span style="font-size: large; font-weight: bold;">Dst:</span>
+            </div>
+            <!-- dst file input -->
+            <div class="col">
+                <input type="file" name="file-dst" accept=".epub" class="form-control">
+            </div>
+            <!-- dst lt select -->
+            <div class="col-md-auto align-self-center">
+                <select name="comp_select_dst" class="form-select">
+                    {%- for lt in lts_list %}
+                    <option {% if lt.tag==lt_dst_sel %}selected {% else %}{% endif %}value="{{ lt.tag }}">
+                        {{ lt.name }}
+                    </option>
+                    {%- endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- submit button -->
+        <div class="row mb-4">
+            <div class="col d-flex justify-content-center">
+                <input type="submit" value="Align" class="btn btn-info">
+            </div>
+        </div>
+
+    </form>
+</div>
 
 {% endblock %}
