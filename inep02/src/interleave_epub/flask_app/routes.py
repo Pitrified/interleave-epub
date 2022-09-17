@@ -87,7 +87,7 @@ def load_ep():
         ii.add_book(file_io_dst, "dst", file_name_dst)
 
         # go forth and align
-        return redirect(url_for("align"))
+        return redirect(url_for("align", first_align=""))
 
     return render_load()
 
@@ -103,7 +103,15 @@ def align():
         files_data = flatten_multidict(request.files)
         print(f"{files_data=}")
 
-    # TODO: parse the request/url
-    ii.align_auto()
+    # parse GET request
+    elif request.method == "GET":
+        args_data = flatten_multidict(request.args)
+        print(f"{args_data=}")
+
+        if "first_align" in args_data:
+            ii.align_auto()
+        elif "dst_pick" in args_data:
+            dst_pick = int(args_data["dst_pick"])
+            ii.pick_dst_sent(dst_pick)
 
     return render_align(ii)

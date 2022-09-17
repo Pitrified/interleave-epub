@@ -1,6 +1,5 @@
 """Interactive interleaver."""
 
-import json
 from pathlib import Path
 from typing import IO, cast
 
@@ -45,6 +44,10 @@ class InterleaverInteractive:
         # placeholder for the epubs
         self.epubs: dict[str, EPub] = {}
         self.has_both_epubs = False
+
+        # aligners
+        self.aligners: dict[str, Aligner] = {}
+        self.reset_chapter_ids()
 
     def set_lang_tag(self, lang_tag: str, which_lang: src_or_dst) -> None:
         """Set the lang tag for one of the books.
@@ -165,12 +168,6 @@ class InterleaverInteractive:
 
         if "src" in self.epubs and "dst" in self.epubs:
             self.has_both_epubs = True
-            # chapter we are currently fixing
-            self.ch_curr_id = 0
-            # id of the first chapter in the src book
-            self.ch_first = 0
-            # delta between src and dst chapter ids
-            self.ch_delta = 0
 
     def create_temp_fol(self) -> None:
         """Create the temp folder this pair of books.
@@ -194,44 +191,59 @@ class InterleaverInteractive:
         """
         if not self.has_both_epubs:
             lg.warning("Load both epubs before aligning.")
+            # TODO should return a specific code to signal the need to redirect back
             return
 
         # create a folder for temporary files
         self.create_temp_fol()
 
-        # get the ids of the chapters in src and dst book
-        ch_id_src = self.ch_curr_id + self.ch_first
-        ch_id_dst = ch_id_src + self.ch_delta
+        # get the current chapters we are using and
+        # create the aligner for this pair of chapters if needed
+        if self.ch_id_pair_str not in self.aligners:
+            self.aligners[self.ch_id_pair_str] = Aligner(
+                self.epubs["src"].chapters[self.ch_id_src],
+                self.epubs["dst"].chapters[self.ch_id_dst],
+                self.sent_which_align,
+                self.ch_id_pair_str,
+                self.lt_sent_tra,
+                self.sent_transformer,
+                self.align_cache_fol,
+            )
 
-        # where to save the WIP alignment info
-        ch_id_pair_str = f"{ch_id_src}_{ch_id_dst}"
+    def reset_chapter_ids(self) -> None:
+        """Reset the chapter ids."""
+        # chapter we are currently fixing
+        self.ch_curr_id = 0
+        # id of the first chapter in the src book
+        self.ch_first_id = 0
+        # delta between src and dst chapter ids
+        self.ch_delta_id = 0
+        self.update_chapter_id_info()
 
-        # extract the current chapters we are using
-        ch_curr_src = self.epubs["src"].chapters[ch_id_src]
-        ch_curr_dst = self.epubs["dst"].chapters[ch_id_dst]
-
-        self.aligner = Aligner(
-            ch_curr_src,
-            ch_curr_dst,
-            self.sent_which_align,
-            ch_id_pair_str,
-            self.lt_sent_tra,
-            self.sent_transformer,
-            self.align_cache_fol,
-        )
+    def update_chapter_id_info(self) -> None:
+        """Update the chapter id related variables."""
+        # actual ids of the chapters in src and dst book
+        self.ch_id_src = self.ch_curr_id + self.ch_first_id
+        self.ch_id_dst = self.ch_id_src + self.ch_delta_id
+        # str with the id pair
+        self.ch_id_pair_str = f"{self.ch_id_src}_{self.ch_id_dst}"
 
     def change_chapter(self) -> None:
         """Go and fix the next chapter."""
+        # update the ch_curr_id
+        # call update_blah
 
     def change_chapter_delta(self) -> None:
         """Change the delta between chapters. Also set which is the first."""
+        # update the ch_delta
+        # call update_blah
 
     def select_src_sent(self) -> None:
         """Select a new src sent to align."""
 
     def pick_dst_sent(self, id_dst_correct: int) -> None:
         """Pick which dst sent is the right one for the currently selected src."""
-        self.aligner.pick_dst_sent(id_dst_correct)
+        self.aligners[self.ch_id_pair_str].pick_dst_sent(id_dst_correct)
 
     def scroll_sent(self, which_sents, direction) -> None:
         """Scroll the right bunch of sentences in the right direction."""

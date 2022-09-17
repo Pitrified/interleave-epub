@@ -27,7 +27,7 @@ def render_load():
 def render_align(ii: InterleaverInteractive):
     """Render the align page."""
     # extract the aligner for sanity
-    al = ii.aligner
+    al = ii.aligners[ii.ch_id_pair_str]
 
     # plot the similarity matrix
     fig, ax = plt.subplots(figsize=(9, 6))
@@ -94,6 +94,8 @@ def render_align(ii: InterleaverInteractive):
 
     return render_template(
         "align.html",
+        src_lang="French",
+        dst_lang="English",  # TODO
         sents_info=sents_info,
         viz_id_src=al.viz_id_src,
         sim_fig_str=sim_fig_str,
