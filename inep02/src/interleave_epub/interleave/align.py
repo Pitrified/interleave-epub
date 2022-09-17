@@ -242,8 +242,6 @@ class Aligner:
             # self.all_ids_src.append(id_src)
             self.all_ids_dst_max.append(int(self.last_good_id_dst_max))
 
-        self.save_align_state()
-
     def compute_ooo_ids(self):
         """Find the non monothonic ids_dst_max."""
         self.is_ooo_flattened = []
@@ -308,6 +306,8 @@ class Aligner:
         """Pick which dst sent is the right one for the currently selected src."""
         # save the correct dst id
         self.all_ids_dst_max[self.curr_id_src] = id_dst_correct
+        # save the intermediate result
+        self.save_align_state()
         # mark this src id as fixed manually
         self.fixed_ids_src.append(self.curr_id_src)
         # compute the remaining ooo ids with the new matching
