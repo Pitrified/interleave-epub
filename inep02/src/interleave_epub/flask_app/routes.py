@@ -95,10 +95,13 @@ def load_ep():
 @app.route("/align", methods=["GET", "POST"])
 def align():
     """Align two epubs."""
-    an_epub = ii.epubs["src"]
-    a_chap = an_epub.chapters[0]
-    a_par = a_chap.paragraphs[0]
-    lg.debug(f"{a_par=}")
+    # parse POST request
+    print(f"{request=}")
+    if request.method == "POST":
+        form_data = flatten_multidict(request.form)
+        print(f"{form_data=}")
+        files_data = flatten_multidict(request.files)
+        print(f"{files_data=}")
 
     # TODO: parse the request/url
     ii.align_auto()

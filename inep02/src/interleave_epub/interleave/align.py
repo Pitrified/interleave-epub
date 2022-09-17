@@ -29,6 +29,7 @@ class Aligner:
         sent_transformer: SentenceTransformer,
         align_cache_fol: Path,
         force_align: bool = False,
+        viz_win_size: int = 10,
     ) -> None:
         """Initialize the aligner."""
         self.ch_src = ch_src
@@ -38,9 +39,17 @@ class Aligner:
         self.sent_transformer = sent_transformer
         self.ch_id_pair_str = ch_id_pair_str
         self.align_cache_fol = align_cache_fol
+        self.viz_win_size = viz_win_size
 
+        # extract the right list of sentences to use when computing the similarity
+        self.sents_text_src_align = self.ch_src.sents_text[self.sent_which_align["src"]]
+        self.sents_text_dst_align = self.ch_dst.sents_text[self.sent_which_align["dst"]]
+        # extract the original text to visualize
+        self.sents_text_src_viz = self.ch_src.sents_text["orig"]
+        self.sents_text_dst_viz = self.ch_dst.sents_text["orig"]
+
+        # the paths of the cached info
         self.match_info_path: dict[str, Path] = {}
-
         align_info_name = f"info_align_{self.ch_id_pair_str}.json"
         self.match_info_path["align"] = self.align_cache_fol / align_info_name
         sim_name = f"info_sim_{self.ch_id_pair_str}.npy"
@@ -86,12 +95,10 @@ class Aligner:
         t0 = default_timer()
         # encode the sentences
         enc_orig_src = sentence_encode_np(
-            self.sent_transformer[self.lt_sent_tra],
-            self.ch_src.sents_text[self.sent_which_align["src"]],
+            self.sent_transformer[self.lt_sent_tra], self.sents_text_src_align
         )
         enc_tran_dst = sentence_encode_np(
-            self.sent_transformer[self.lt_sent_tra],
-            self.ch_dst.sents_text[self.sent_which_align["dst"]],
+            self.sent_transformer[self.lt_sent_tra], self.sents_text_dst_align
         )
         # compute the similarity
         self.sim: np.ndarray = cosine_similarity(enc_orig_src, enc_tran_dst)
@@ -286,9 +293,27 @@ class Aligner:
         else:
             self.curr_id_dst_interpolate = int(id_dst_interpolate_maybe)
 
+        # reset src/dst viz ids
+        self.viz_id_src = self.curr_id_src
+        self.viz_id_dst = self.curr_id_dst_interpolate
+
     def save_align_state(self):
         """Write the current alignment state."""
         align_info = {
             "all_ids_dst_max": self.all_ids_dst_max,
         }
         self.match_info_path["align"].write_text(json.dumps(align_info, indent=4))
+
+    def pick_dst_sent(self, id_dst_correct: int) -> None:
+        """Pick which dst sent is the right one for the currently selected src."""
+        # save the correct dst id
+        self.all_ids_dst_max[self.curr_id_src] = id_dst_correct
+        # mark this src id as fixed manually
+        self.fixed_ids_src.append(self.curr_id_src)
+        # compute the remaining ooo ids with the new matching
+        self.compute_ooo_ids()
+        # find the next src id to fix
+        self.find_next_valid_ooo()
+
+    def scroll_sent(self, which_sents, direction) -> None:
+        """Scroll the right bunch of sentences in the right direction."""

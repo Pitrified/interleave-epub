@@ -3,12 +3,60 @@
 {% block container_content %}
 
 <div class="container">
+
     <!-- header -->
     <div class="row mb-5">
         <div class="col d-flex justify-content-center">
             <h1>Align chapters</h1>
         </div>
     </div>
+
+    <!-- sentences -->
+    <!-- {{ sents_info }} -->
+    <div>
+        <table class="table table-borderless">
+            <thead>
+                <tr>
+                    <th scope="col">English</th>
+                    <th scope="col">French</th>
+                    <th scope="col" style="text-align: center;">SRC</th>
+                    <th scope="col" style="text-align: center;">DST</th>
+                    <th scope="col" style="text-align: center;">MATCH</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for info in sents_info %}
+                <tr>
+                    {% set is_highlighted = info.viz_id_src_show==viz_id_src %}
+                    <td {% if is_highlighted %} class="table-primary" {% else %} {% endif %}
+                        style="width: 410px; word-wrap: break-word; text-align: justify;">
+                        <p {% if is_highlighted %} class="lead" {% else %} {% endif %}>
+                            {{ info.sent_text_src }}
+                        </p>
+                    </td>
+                    <td style="width: 410px; word-wrap: break-word; text-align: justify;">
+                        {{ info.sent_text_dst }}
+                    </td>
+                    <td style="width: 50px;">
+                        <a class="btn btn-info" style="width: 50px;" href="{{ url_for('align', src_pick=info.viz_id_src_show) }}">
+                            {{ info.viz_id_src_show }}
+                        </a>
+                    </td>
+                    <td style="width: 50px;">
+                        <a class="btn btn-info" style="width: 50px;" href="{{ url_for('align', dst_pick=info.viz_id_dst_show) }}">
+                            {{ info.viz_id_dst_show }}
+                        </a>
+                    </td>
+                    <td style="width: 50px;">
+                        {{ info.guess_id_dst }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- images -->
     <div class="row mb-4">
         <div class="col d-flex justify-content-center">
             <img src="{{ sim_fig_str }}" alt="Similarity plot.">
