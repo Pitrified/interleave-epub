@@ -92,12 +92,15 @@ def render_align(ii: InterleaverInteractive):
             }
         )
 
+    guess_id_dst_for_viz_id_src = al.all_ids_dst_max[al.viz_id_src]
+
     return render_template(
         "align.html",
         src_lang="French",
         dst_lang="English",  # TODO
         sents_info=sents_info,
         viz_id_src=al.viz_id_src,
+        guess_id_dst_for_viz_id_src=guess_id_dst_for_viz_id_src,
         sim_fig_str=sim_fig_str,
         align_fig_str=align_fig_str,
     )

@@ -17,38 +17,49 @@
         <table class="table table-borderless">
             <thead>
                 <tr>
-                    <th scope="col">{{ src_lang }}</th>
-                    <th scope="col">{{ dst_lang }}</th>
                     <th scope="col" style="text-align: center;">SRC</th>
+                    <th scope="col" style="text-align: center;">{{ src_lang }}</th>
+                    <th scope="col" style="text-align: center;">{{ dst_lang }}</th>
                     <th scope="col" style="text-align: center;">DST</th>
                     <th scope="col" style="text-align: center;">HOPEFUL</th>
                 </tr>
             </thead>
             <tbody>
                 {% for info in sents_info %}
+                {% set is_highlighted_src = info.viz_id_src_show==viz_id_src %}
+                {% set is_highlighted_dst = info.viz_id_dst_show==guess_id_dst_for_viz_id_src %}
                 <tr>
-                    {% set is_highlighted = info.viz_id_src_show==viz_id_src %}
-                    <td {% if is_highlighted %} class="table-primary" {% else %} {% endif %}
-                        style="width: 410px; word-wrap: break-word; text-align: justify;">
-                        <p {% if is_highlighted %} class="lead" {% else %} {% endif %}>
-                            {{ info.sent_text_src }}
-                        </p>
-                    </td>
-                    <td style="width: 410px; word-wrap: break-word; text-align: justify;">
-                        {{ info.sent_text_dst }}
-                    </td>
                     <td style="width: 50px;">
-                        <a class="btn btn-info" style="width: 50px;" href="{{ url_for('align', src_pick=info.viz_id_src_show) }}">
+                        <a class="btn" style="width: 60px;"
+                            href="{{ url_for('align', src_pick=info.viz_id_src_show) }}">
                             {{ info.viz_id_src_show }}
                         </a>
                     </td>
+                    <td {% if is_highlighted_src %} class="table-primary" {% else %} {% endif %}
+                        style="width: 410px; word-wrap: break-word; text-align: justify;">
+                        <p {% if is_highlighted_src %} class="lead" {% else %} {% endif %}>
+                            {{ info.sent_text_src }}
+                        </p>
+                    </td>
+                    <td {% if is_highlighted_dst %} class="table-secondary" {% else %} {% endif %}
+                        style="width: 410px; word-wrap: break-word; text-align: justify;">
+                        <!-- <a class="btn" style="text-align: justify;" href="{{ url_for('align', dst_pick=info.viz_id_dst_show) }}"> -->
+                        <!-- <a style="text-align: justify;" href="{{ url_for('align', dst_pick=info.viz_id_dst_show) }}"> -->
+                        <p {% if is_highlighted_dst %} class="lead" {% else %} {% endif %}>
+                            {{ info.sent_text_dst }}
+                        </p>
+                        <!-- </a> -->
+                    </td>
                     <td style="width: 50px;">
-                        <a class="btn btn-info" style="width: 50px;" href="{{ url_for('align', dst_pick=info.viz_id_dst_show) }}">
+                        <a class="btn btn-info" style="width: 60px;"
+                            href="{{ url_for('align', dst_pick=info.viz_id_dst_show) }}">
                             {{ info.viz_id_dst_show }}
                         </a>
                     </td>
-                    <td style="width: 50px;">
-                        {{ info.guess_id_dst }}
+                    <td style="width: 50px; text-align: center;">
+                        <a class="btn" style="width: 60px;" href="">
+                            {{ info.guess_id_dst }}
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
