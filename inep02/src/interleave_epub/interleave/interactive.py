@@ -42,7 +42,7 @@ class InterleaverInteractive:
         self.has_nlp_loaded = False
 
         # placeholder for the epubs
-        self.epubs: dict[str, EPub] = {}
+        self.epubs: dict[src_or_dst, EPub] = {}
         self.has_both_epubs = False
 
         # aligners
@@ -228,15 +228,93 @@ class InterleaverInteractive:
         # str with the id pair
         self.ch_id_pair_str = f"{self.ch_id_src}_{self.ch_id_dst}"
 
-    def change_chapter(self) -> None:
+    def validate_chapter_id(self) -> None:
+        """Validate the chapter ids.
+
+        s 0[xxxx] -> first=0
+        d 0[xxxx] -> delta=0
+
+        s 0[xxxx]    -> first=0
+        d 1[...xxxx] -> delta=3
+
+        s 0[xxxx]    -> first=0
+        d 2[xxxx...]
+
+        s 1[...xxxx] -> first=3
+        d 0[xxxx]    -> delta=-3
+        
+        s 1[...xxxx] -> first=3
+        d 1[...xxxx] -> delta=0
+
+        s 1[...xxxx] -> first=3
+        d 2[xxxx...] -> delta=-3
+
+        s 2[xxxx...] -> ??? set max number of valid chapter?
+        d 0[xxxx]    -> delta=0
+
+        s 2[xxxx...]
+        d 1[...xxxx] -> delta=3
+
+        s 2[xxxx...]
+        d 2[xxxx...] -> delta=0
+
+        s 3[...xxxx...]
+        d 3[...xxxx...] -> delta=0
+
+        As we only update one of curr/first/delta,
+        it makes sense to keep the validation in the funcs that change those values.
+
+        The user must not be a fool.
+        """
+
+    def change_chapter_curr(self, direction: str) -> None:
         """Go and fix the next chapter."""
         # update the ch_curr_id
-        # call update_blah
+        if direction == "back":
+            self.ch_curr_id -= 1
+        elif direction == "forward":
+            self.ch_curr_id += 1
 
-    def change_chapter_delta(self) -> None:
+        # validate the ch id
+
+        # can never be negative
+        if self.ch_curr_id < 0:
+            self.ch_curr_id = 0
+
+        # the number of chapters in the list for the two books
+        num_ch_src = self.epubs["src"].chap_num
+        num_ch_dst = self.epubs["dst"].chap_num
+
+        # the possible new ids for src and dst
+        ch_id_src_new = self.ch_curr_id + self.ch_first_id
+        ch_id_dst_new = ch_id_src_new + self.ch_delta_id
+
+        # we only ever increase by one, if any one fails we have a problem
+        if ch_id_src_new > num_ch_src or ch_id_dst_new > num_ch_dst:
+            self.ch_curr_id -= 1
+
+        # TODO if we had a reliable chap_valid_num we could just check curr_id>valid_num
+        # first should actually be an attribute of the epubs
+
+        # update the other chap ids
+        self.update_chapter_id_info()
+        # compute the alignment for this pair
+        self.align_auto()
+
+    def change_chapter_delta(self, direction: str) -> None:
         """Change the delta between chapters. Also set which is the first."""
         # update the ch_delta
-        # call update_blah
+        if direction == "back":
+            self.ch_delta_id -= 1
+        elif direction == "forward":
+            self.ch_delta_id += 1
+
+        # TODO validation lol
+
+        # update the other chap ids
+        self.update_chapter_id_info()
+        # compute the alignment for this pair
+        self.align_auto()
 
     def select_src_sent(self) -> None:
         """Select a new src sent to align."""
@@ -247,3 +325,6 @@ class InterleaverInteractive:
 
     def scroll_sent(self, which_sents, direction) -> None:
         """Scroll the right bunch of sentences in the right direction."""
+
+    def save_epub(self) -> None:
+        """Build the interleaved epub."""

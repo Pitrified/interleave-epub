@@ -100,6 +100,10 @@ def render_align(ii: InterleaverInteractive):
         dst_lang="English",  # TODO
         sents_info=sents_info,
         viz_id_src=al.viz_id_src,
+        ch_id_src=ii.ch_id_src,
+        ch_id_dst=ii.ch_id_dst,
+        ch_first_id=ii.ch_first_id,
+        ch_delta_id=ii.ch_delta_id,
         guess_id_dst_for_viz_id_src=guess_id_dst_for_viz_id_src,
         sim_fig_str=sim_fig_str,
         align_fig_str=align_fig_str,

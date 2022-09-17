@@ -25,6 +25,7 @@ class EPub:
         lang_trad: str,
         nlp: dict[str, Language],
         pipe: dict[str, TranslationPipelineCache],
+        chap_id_first: int = 0,
     ) -> None:
         """Initialize an epub."""
         # load the file in memory
@@ -48,7 +49,7 @@ class EPub:
 
         # build a dict of chapters
         self.chapters: dict[int, Chapter] = {}
-        for chap_id, chap_file_name in enumerate(tqdm(self.chap_file_names[:1])):
+        for chap_id, chap_file_name in enumerate(tqdm(self.chap_file_names[:2])):
             self.chapters[chap_id] = Chapter(
                 self.input_zip.read(chap_file_name),
                 chap_file_name,
@@ -57,9 +58,15 @@ class EPub:
                 self.pipe,
             )
 
+        # TODO: compute an actual valid chap num
+        self.chap_num = len(self.chapters)
+
+        # find_text_chapters is pretty neat, but there could be some cover/preface chapters
+        self.chap_id_first = chap_id_first
+
     def find_text_chapters(self) -> None:
         """Find and sort the chapter paths and names.
-        
+
         Look for paths that match a regex ``name{number}`` and sort on ``number``.
         """
         # get the paths that are valid xhtml and similar
@@ -124,6 +131,7 @@ class EPub:
 
         # if the best match sucks keep all chapters
         if best_match_num <= 2:
+            self.chap_file_names = [str(p) for p in self.chap_file_paths]
             return
 
         # pair chapter name and chapter number

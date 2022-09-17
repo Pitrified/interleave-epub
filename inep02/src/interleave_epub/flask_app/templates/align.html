@@ -11,6 +11,58 @@
         </div>
     </div>
 
+    <!-- navigate buttons -->
+    <div>
+        <div>
+            Src:
+            <a class="btn btn-info" href="{{ url_for('align', src_move='back') }}">
+                Back
+            </a>
+            <a class="btn btn-info" href="{{ url_for('align', src_move='forward') }}">
+                Forward
+            </a>
+            Dst:
+            <a class="btn btn-info" href="{{ url_for('align', dst_move='back') }}">
+                Back
+            </a>
+            <a class="btn btn-info" href="{{ url_for('align', dst_move='forward') }}">
+                Forward
+            </a>
+            Chapter {{ ch_id_src }} ({{ ch_id_dst }}):
+            <a class="btn btn-info" href="{{ url_for('align', chap_move='back') }}">
+                Back
+            </a>
+            <a class="btn btn-info" href="{{ url_for('align', chap_move='forward') }}">
+                Forward
+            </a>
+            First {{ ch_first_id }}:
+            <a class="btn btn-info" href="{{ url_for('align', first_move='back') }}">
+                Back
+            </a>
+            <a class="btn btn-info" href="{{ url_for('align', first_move='forward') }}">
+                Forward
+            </a>
+            Delta {{ ch_delta_id }}:
+            <a class="btn btn-info" href="{{ url_for('align', delta_move='back') }}">
+                Back
+            </a>
+            <a class="btn btn-info" href="{{ url_for('align', delta_move='forward') }}">
+                Forward
+            </a>
+        </div>
+        <div>
+            <a class="btn btn-info" href="{{ url_for('align', ignore_cached_match=True) }}">
+                Ignore cached match
+            </a>
+            <a class="btn btn-info" href="{{ url_for('align', save_epub=True) }}">
+                Save book
+            </a>
+            <a class="btn btn-info" href="{{ url_for('align') }}">
+                No args
+            </a>
+        </div>
+    </div>
+
     <!-- sentences -->
     <!-- {{ sents_info }} -->
     <div>
@@ -21,7 +73,7 @@
                     <th scope="col" style="text-align: center;">{{ src_lang }}</th>
                     <th scope="col" style="text-align: center;">{{ dst_lang }}</th>
                     <th scope="col" style="text-align: center;">DST</th>
-                    <th scope="col" style="text-align: center;">HOPEFUL</th>
+                    <th scope="col" style="text-align: center;">MATCH</th>
                 </tr>
             </thead>
             <tbody>

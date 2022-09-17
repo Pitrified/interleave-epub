@@ -110,8 +110,17 @@ def align():
 
         if "first_align" in args_data:
             ii.align_auto()
+
         elif "dst_pick" in args_data:
             dst_pick = int(args_data["dst_pick"])
             ii.pick_dst_sent(dst_pick)
+
+        elif "chap_move" in args_data:
+            chap_move = args_data["chap_move"]
+            ii.change_chapter_curr(chap_move)
+
+        elif "delta_move" in args_data:
+            delta_move = args_data["delta_move"]
+            ii.change_chapter_delta(delta_move)
 
     return render_align(ii)
