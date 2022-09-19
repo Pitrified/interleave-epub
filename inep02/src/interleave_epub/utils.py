@@ -1,6 +1,7 @@
 """Utility functions for the whole package."""
 
 
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
 
@@ -56,3 +57,16 @@ def is_index_valid(
     if valid_index == index:
         return True
     return False
+
+
+def are_contiguos(it):
+    """Return true if the unique elements are contiguos.
+    
+    Elements should probably be int.
+    """
+    it = set(it)
+    sort_it = sorted(it)
+    for l, r in pairwise(sort_it):
+        if r - l != 1:
+            return False
+    return True

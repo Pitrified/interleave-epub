@@ -1,5 +1,7 @@
 """Align to list of sentences."""
 
+from collections import Counter
+from itertools import groupby
 import json
 from math import isnan
 from pathlib import Path
@@ -14,6 +16,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from interleave_epub.epub.chapter import Chapter
 from interleave_epub.nlp.utils import sentence_encode_np
+from interleave_epub.utils import are_contiguos
 
 
 class Aligner:
@@ -62,34 +65,46 @@ class Aligner:
             and self.match_info_path["sim"].exists()
         )
 
-        # compute similarity and the alignment even if we have a cached version,
+        # compute the alignment even if we have a cached version,
         # we want all the other class variables to be set
+
         if use_cached_res:
             self.sim = np.load(self.match_info_path["sim"])
         else:
-            self.compute_similarity()
+            self.compute_sentence_similarity()
+            # save the similarity
+            np.save(self.match_info_path["sim"], self.sim)
 
-        self.align_auto()
+        self.align_sentences()
 
-        # if we have an alignment already computed, load it
-        # unless we are forcing a realignment
-        # the only thing we change are the matching dst ids
-        if use_cached_res:
-            lg.info("Found match info at {}", self.match_info_path["align"])
-            align_info = json.loads(self.match_info_path["align"].read_text())
-            self.all_ids_dst_max: list[int] = align_info["all_ids_dst_max"]
-            # TODO reload fixed_src_ids as well?
+        # # if we have an alignment already computed, load it
+        # # unless we are forcing a realignment
+        # # the only thing we change are the matching dst ids
+        # if use_cached_res:
+        #     lg.info("Found match info at {}", self.match_info_path["align"])
+        #     align_info = json.loads(self.match_info_path["align"].read_text())
+        #     self.all_ids_dst_max: list[int] = align_info["all_ids_dst_max"]
+        #     # TODO reload fixed_src_ids as well?
 
         # use the possibly updated matching to compute ooo ids
         self.compute_ooo_ids()
         self.interpolate_ooo_ids()
+
+        # align the paragraphs
+        self.align_paragraphs()
+
+        # reload the partial paragraph matches
+        # if you are not reloading, save the initial match
+        # or next time the use_cached_res will still be false
+
+        # find valid ooo paragraphs to fix manually
 
         # set up the interactive parts of the Aligner
         # src ids we have set manually, to be skipped when searching for ooo ids
         self.fixed_ids_src: list[int] = []
         self.find_next_valid_ooo()
 
-    def compute_similarity(self):
+    def compute_sentence_similarity(self):
         """Compute the similarity between the two list of sentences."""
         lg.debug(f"Computing similarity.")
         t0 = default_timer()
@@ -103,10 +118,8 @@ class Aligner:
         # compute the similarity
         self.sim: np.ndarray = cosine_similarity(enc_orig_src, enc_tran_dst)
         lg.debug(f"Computing similarity: done in {default_timer()-t0:.2f}.")
-        # save the similarity
-        np.save(self.match_info_path["sim"], self.sim)
 
-    def align_auto(
+    def align_sentences(
         self,
         win_len: int = 20,
         min_sent_len: int = 4,
@@ -270,6 +283,168 @@ class Aligner:
         self.all_ids_dst_interpolate = pd.Series(self.all_ids_dst_max)
         self.all_ids_dst_interpolate[self.is_ooo_flattened] = np.nan
         self.all_ids_dst_interpolate.interpolate(inplace=True)
+
+        # pair up src and dst interpolated cs_ids
+        self.interp_cs_src_to_dst = {
+            cs_src: cs_dst
+            for cs_src, cs_dst in zip(
+                self.all_ids_src,
+                self.all_ids_dst_interpolate,
+            )
+        }
+
+    def align_paragraphs(self):
+        """Align the paragraphs using the sentence alignment."""
+        # the fraction of sentences in a src paragraph
+        # matched to the same dst paragraph to have a direct match
+        self.th_consensus = 0.6
+
+        # pair up good (long) sentences id in the chapter and the paragraph id they belong to
+        cs_p_src_ids = [
+            {
+                "cs_src_id": cs_src_id,
+                "par_src_id": self.ch_src.cs_to_ps[cs_src_id][0],
+            }
+            for cs_src_id in self.all_good_ids_src_rescaled
+        ]
+
+        ############################################################
+        # the first paragraph matching
+        self.good_par_src_to_dst = {}
+
+        # group the pairs on the paragraphs
+        # par_src_id: the src paragraph
+        # cs_p_src_par_ids: the (src_chap_sent_id, src_par_id) pairs for this src_paragraph
+        for par_src_id, cs_p_src_par_ids in groupby(
+            cs_p_src_ids, lambda x: x["par_src_id"]
+        ):
+
+            # the src chapter sentence ids for this src paragraph
+            cs_src_ids = list(cs_p_src["cs_src_id"] for cs_p_src in cs_p_src_par_ids)
+            num_sents_src = len(cs_src_ids)
+            print(par_src_id, cs_src_ids, num_sents_src)
+
+            # search for the cs_p_src id in the good_src_rescaled dict
+            # if you find it, get the corresponding dst cs_src_id
+            # -> we are iterating over the all_good_ids_src_rescaled sooo
+            # extract all the paragraphs those sentences belong to
+            par_dst_ids = []
+            for cs_src_id in cs_src_ids:
+                if cs_src_id in self.interp_cs_src_to_dst:
+                    # the chapter_sentence_dst id
+                    cs_dst_id = self.interp_cs_src_to_dst[cs_src_id]
+                    # the interpolated values are not int
+                    cs_dst_id = int(cs_dst_id)
+                    # dst (paragraph, ps) id
+                    ps_dst_id = self.ch_dst.cs_to_ps[cs_dst_id]
+                    # get only the paragraph
+                    par_dst_ids.append(ps_dst_id[0])
+                else:
+                    print(f"Very unexpected, missing {cs_src_id}.")
+
+            # decide if there is a consensus on the paragraphs
+            par_dst_ids_count = Counter(par_dst_ids)
+            print(f"\t{par_dst_ids_count}")
+            par_dst_mc = par_dst_ids_count.most_common()[0]
+            par_dst_mc_id = par_dst_mc[0]
+            par_dst_mc_count = par_dst_mc[1]
+
+            # if enough sentences point to the same dst paragraph, select that
+            if par_dst_mc_count / num_sents_src > self.th_consensus:
+                print(f"\tMatching par {par_src_id} {par_dst_mc_id}")
+                self.good_par_src_to_dst[par_src_id] = par_dst_mc_id
+            else:
+                print(f"\tNo consensus matching. ------------------------")
+                # if all the dst paragraphs are contiguos, select the min
+                if are_contiguos(par_dst_ids):
+                    self.good_par_src_to_dst[par_src_id] = min(par_dst_ids)
+                    print(f"\tContiguos matching {min(par_dst_ids)}.")
+                else:
+                    print(f"\tNo matching.")
+
+        ############################################################
+        # the second paragraph matching
+        # if there are one or two paragraph missing from both src and dst
+        # fill them in
+        self.better_par_src_to_dst = {}
+        lg.debug("Building better_par_src_to_dst")
+
+        last_src_id = 0
+        last_dst_id = 0
+        for par_src_id, par_dst_id in self.good_par_src_to_dst.items():
+            print(f"{par_src_id} {par_dst_id}")
+            if par_src_id > last_src_id + 1:
+                print(f"missing src from {last_src_id+1} to {par_src_id-1}")
+
+            after_last_par_src_id = last_src_id + 1
+            after_last_par_dst_id = last_dst_id + 1
+            prev_par_src_id = par_src_id - 1
+            prev_par_dst_id = par_dst_id - 1
+
+            # add the middle one if exactly one is missing
+            if (
+                after_last_par_src_id == prev_par_src_id
+                and after_last_par_dst_id == prev_par_dst_id
+            ):
+                print(f"probable {prev_par_src_id} {after_last_par_dst_id}")
+                self.better_par_src_to_dst[prev_par_src_id] = after_last_par_dst_id
+
+            # add the middle two if exactly two are missing
+            elif (
+                after_last_par_src_id + 1 == prev_par_src_id
+                and after_last_par_dst_id + 1 == prev_par_dst_id
+            ):
+                print(f"probable two {after_last_par_src_id} {after_last_par_dst_id}")
+                print(
+                    f"probable two {after_last_par_src_id+1} {after_last_par_dst_id+1}"
+                )
+                self.better_par_src_to_dst[
+                    after_last_par_src_id
+                ] = after_last_par_dst_id
+                self.better_par_src_to_dst[after_last_par_src_id + 1] = (
+                    after_last_par_dst_id + 1
+                )
+
+            # add the current one
+            self.better_par_src_to_dst[par_src_id] = par_dst_id
+
+            # update data
+            last_src_id = par_src_id
+            last_dst_id = par_dst_id
+
+        # flatten the better matching to have all the possible par src id
+        self.better_par_src_to_dst_flat = {}
+        for par_src_id in range(len(self.ch_src.paragraphs)):
+            if par_src_id in self.better_par_src_to_dst:
+                self.better_par_src_to_dst_flat[
+                    par_src_id
+                ] = self.better_par_src_to_dst[par_src_id]
+            else:
+                self.better_par_src_to_dst_flat[par_src_id] = -1
+
+    def find_next_par_to_fix(self):
+        """Find the first ooo src id that has not been fixed yet."""
+        last_src_id = 0
+        last_dst_id = 0
+        for par_src_id, par_dst_id in self.better_par_src_to_dst_flat.items():
+            print(f"{par_src_id} {par_dst_id}")
+
+            # check for missing data
+            if par_dst_id == -1:
+                self.curr_fix_src_par_id = par_src_id
+                self.curr_fix_dst_par_id = last_dst_id
+                return
+
+            # check for unsorted dst paragraphs
+            if par_dst_id < last_dst_id:
+                print("OOO paragraphs")
+                self.curr_fix_src_par_id = last_src_id
+                self.curr_fix_dst_par_id = last_dst_id
+                return
+
+            # update data
+            last_src_id = par_src_id
+            last_dst_id = par_dst_id
 
     def find_next_valid_ooo(self):
         """Find the first ooo src id that has not been fixed yet."""
