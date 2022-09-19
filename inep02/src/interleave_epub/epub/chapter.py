@@ -3,6 +3,7 @@ from typing import Literal, get_args
 
 from bs4 import BeautifulSoup
 from spacy.language import Language
+from spacy.tokens import Doc, Span
 
 from interleave_epub.epub.paragraph import Paragraph
 from interleave_epub.nlp.cached_pipe import TranslationPipelineCache
@@ -59,6 +60,7 @@ class Chapter:
             )
 
         self.build_flat_sents()
+        self.build_index()
 
     def enumerate_sents(
         self, which_sent: orig_or_trad, start_par: int = 0, end_par: int = 0
@@ -73,7 +75,7 @@ class Chapter:
     def build_flat_sents(self) -> None:
         """Build lists of sentences in the chapter, as Doc and text."""
         self.sents_text: dict[str, list[str]] = {}
-        self.sents_doc: dict[str, list[str]] = {}
+        self.sents_doc: dict[str, list[Doc | Span]] = {}
         self.sents_psid: dict[str, list[tuple[int, int]]] = {}
         self.sents_len: dict[str, list[int]] = {}
         self.sents_num: dict[str, int] = {}
@@ -90,3 +92,17 @@ class Chapter:
                 self.sents_psid[which_sent].append(sent_psid)
                 self.sents_len[which_sent].append(len(sent))
             self.sents_num[which_sent] = len(self.sents_text[which_sent])
+
+    def build_index(self):
+        """Build maps to go from ``sent_in_chap_id`` to ``(par_id, sent_in_par_id)`` and vice-versa."""
+        self.ps_to_cs = {}
+        self.cs_to_ps = {}
+        # sentence id in the whole chapter
+        sc_id = 0
+        # par id in the chapter
+        for p_id, par in enumerate(self.paragraphs):
+            # sentence id in the paragraph
+            for sp_id, _sent in enumerate(par.sents["orig"]):
+                self.ps_to_cs[(p_id, sp_id)] = sc_id
+                self.cs_to_ps[sc_id] = (p_id, sp_id)
+                sc_id += 1
