@@ -199,7 +199,7 @@ class InterleaverInteractive:
 
         # get the current chapters we are using and
         # create the aligner for this pair of chapters if needed
-        if self.ch_id_pair_str not in self.aligners:
+        if self.ch_id_pair_str not in self.aligners or force_align:
             self.aligners[self.ch_id_pair_str] = Aligner(
                 self.epubs["src"].chapters[self.ch_id_src],
                 self.epubs["dst"].chapters[self.ch_id_dst],
@@ -208,6 +208,7 @@ class InterleaverInteractive:
                 self.lt_sent_tra,
                 self.sent_transformer,
                 self.align_cache_fol,
+                force_align,
             )
 
     def reset_chapter_ids(self) -> None:
@@ -242,7 +243,7 @@ class InterleaverInteractive:
 
         s 1[...xxxx] -> first=3
         d 0[xxxx]    -> delta=-3
-        
+
         s 1[...xxxx] -> first=3
         d 1[...xxxx] -> delta=0
 

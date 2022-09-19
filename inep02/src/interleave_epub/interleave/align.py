@@ -94,15 +94,27 @@ class Aligner:
         self.align_paragraphs()
 
         # reload the partial paragraph matches
-        # if you are not reloading, save the initial match
-        # or next time the use_cached_res will still be false
+        if use_cached_res:
+            lg.info("Found match info at {}", self.match_info_path["align"])
+            align_info = json.loads(self.match_info_path["align"].read_text())
+            tmp: dict[int, int] = align_info["better_par_src_to_dst_flat"]
+            # json files treat keys as string
+            self.better_par_src_to_dst_flat = {int(k): v for k, v in tmp.items()}
+        else:
+            # if you are not reloading, save the initial match
+            # or next time the use_cached_res will still be false
+            # (the first time there is no partial file until you set the first par)
+            self.save_align_state()
 
         # find valid ooo paragraphs to fix manually
-
-        # set up the interactive parts of the Aligner
         # src ids we have set manually, to be skipped when searching for ooo ids
+        self.fixed_src_par_ids: list[int] = []
+        self.find_next_par_to_fix()
+
+        # # set up the interactive parts of the Aligner
+        # # src ids we have set manually, to be skipped when searching for ooo ids
         self.fixed_ids_src: list[int] = []
-        self.find_next_valid_ooo()
+        # self.find_next_valid_ooo()
 
     def compute_sentence_similarity(self):
         """Compute the similarity between the two list of sentences."""
@@ -117,7 +129,7 @@ class Aligner:
         )
         # compute the similarity
         self.sim: np.ndarray = cosine_similarity(enc_orig_src, enc_tran_dst)
-        lg.debug(f"Computing similarity: done in {default_timer()-t0:.2f}.")
+        lg.debug(f"Computing similarity: done in {default_timer()-t0:.2f}s.")
 
     def align_sentences(
         self,
@@ -211,7 +223,7 @@ class Aligner:
                 ii_fit = 0
             if ii_fit >= self.sent_num_dst:
                 ii_fit = self.sent_num_dst - 1
-            # print(f"{id_src=} {id_dst_ratio=} {ii_fit=}")
+            # lg.debug(f"{id_src=} {id_dst_ratio=} {ii_fit=}")
 
             # chop the filter, centering the apex on the fitted line ii_fit
             # the apex is in win_len*2+1
@@ -231,7 +243,7 @@ class Aligner:
             else:
                 triang_filt_chop = triang_filt_shifted
 
-            # print( f"{id_src=} {id_dst_ratio=} {id_dst_ratio-win_len=} {id_dst_ratio+win_len+1=} {len(some_sent_sim)=} {len(triang_filt_chop)=}")
+            # lg.debug( f"{id_src=} {id_dst_ratio=} {id_dst_ratio-win_len=} {id_dst_ratio+win_len+1=} {len(some_sent_sim)=} {len(triang_filt_chop)=}")
             assert len(triang_filt_chop) == len(some_sent_sim)
 
             # rescale the similarity
@@ -322,7 +334,7 @@ class Aligner:
             # the src chapter sentence ids for this src paragraph
             cs_src_ids = list(cs_p_src["cs_src_id"] for cs_p_src in cs_p_src_par_ids)
             num_sents_src = len(cs_src_ids)
-            print(par_src_id, cs_src_ids, num_sents_src)
+            # lg.debug("{} {} {}", par_src_id, cs_src_ids, num_sents_src)
 
             # search for the cs_p_src id in the good_src_rescaled dict
             # if you find it, get the corresponding dst cs_src_id
@@ -340,41 +352,39 @@ class Aligner:
                     # get only the paragraph
                     par_dst_ids.append(ps_dst_id[0])
                 else:
-                    print(f"Very unexpected, missing {cs_src_id}.")
+                    lg.warning(f"Very unexpected, missing {cs_src_id}.")
 
             # decide if there is a consensus on the paragraphs
             par_dst_ids_count = Counter(par_dst_ids)
-            print(f"\t{par_dst_ids_count}")
+            # lg.debug(f"\t{par_dst_ids_count}")
             par_dst_mc = par_dst_ids_count.most_common()[0]
             par_dst_mc_id = par_dst_mc[0]
             par_dst_mc_count = par_dst_mc[1]
 
             # if enough sentences point to the same dst paragraph, select that
             if par_dst_mc_count / num_sents_src > self.th_consensus:
-                print(f"\tMatching par {par_src_id} {par_dst_mc_id}")
+                # lg.debug(f"\tMatching par {par_src_id} {par_dst_mc_id}")
                 self.good_par_src_to_dst[par_src_id] = par_dst_mc_id
             else:
-                print(f"\tNo consensus matching. ------------------------")
+                # lg.debug(f"\tNo consensus matching. ------------------------")
                 # if all the dst paragraphs are contiguos, select the min
                 if are_contiguos(par_dst_ids):
                     self.good_par_src_to_dst[par_src_id] = min(par_dst_ids)
-                    print(f"\tContiguos matching {min(par_dst_ids)}.")
-                else:
-                    print(f"\tNo matching.")
+                    # lg.debug(f"\tContiguos matching {min(par_dst_ids)}.")
+                # else: lg.debug(f"\tNo matching.")
 
         ############################################################
         # the second paragraph matching
         # if there are one or two paragraph missing from both src and dst
         # fill them in
         self.better_par_src_to_dst = {}
-        lg.debug("Building better_par_src_to_dst")
+        # lg.debug("Building better_par_src_to_dst")
 
         last_src_id = 0
         last_dst_id = 0
         for par_src_id, par_dst_id in self.good_par_src_to_dst.items():
-            print(f"{par_src_id} {par_dst_id}")
-            if par_src_id > last_src_id + 1:
-                print(f"missing src from {last_src_id+1} to {par_src_id-1}")
+            # lg.debug(f"{par_src_id} {par_dst_id}")
+            # if par_src_id > last_src_id + 1: lg.debug(f"missing src from {last_src_id+1} to {par_src_id-1}")
 
             after_last_par_src_id = last_src_id + 1
             after_last_par_dst_id = last_dst_id + 1
@@ -386,7 +396,7 @@ class Aligner:
                 after_last_par_src_id == prev_par_src_id
                 and after_last_par_dst_id == prev_par_dst_id
             ):
-                print(f"probable {prev_par_src_id} {after_last_par_dst_id}")
+                # lg.debug(f"probable {prev_par_src_id} {after_last_par_dst_id}")
                 self.better_par_src_to_dst[prev_par_src_id] = after_last_par_dst_id
 
             # add the middle two if exactly two are missing
@@ -394,10 +404,8 @@ class Aligner:
                 after_last_par_src_id + 1 == prev_par_src_id
                 and after_last_par_dst_id + 1 == prev_par_dst_id
             ):
-                print(f"probable two {after_last_par_src_id} {after_last_par_dst_id}")
-                print(
-                    f"probable two {after_last_par_src_id+1} {after_last_par_dst_id+1}"
-                )
+                # lg.debug( f"probable two {after_last_par_src_id} {after_last_par_dst_id}")
+                # lg.debug( f"probable two {after_last_par_src_id+1} {after_last_par_dst_id+1}")
                 self.better_par_src_to_dst[
                     after_last_par_src_id
                 ] = after_last_par_dst_id
@@ -424,27 +432,50 @@ class Aligner:
 
     def find_next_par_to_fix(self):
         """Find the first ooo src id that has not been fixed yet."""
-        last_src_id = 0
-        last_dst_id = 0
+        # self.is_ooo_par_flat = []
         for par_src_id, par_dst_id in self.better_par_src_to_dst_flat.items():
-            print(f"{par_src_id} {par_dst_id}")
+            # lg.debug(f"flat {par_src_id} {par_dst_id}")
+            # check to the left if you can
+            if par_src_id > 0:
+                ooo_left = par_dst_id < self.better_par_src_to_dst_flat[par_src_id - 1]
+            else:
+                ooo_left = False
+            # check to the right if you can
+            if par_src_id < len(self.better_par_src_to_dst_flat) - 1:
+                ooo_right = par_dst_id > self.better_par_src_to_dst_flat[par_src_id + 1]
+            else:
+                ooo_right = False
+            # if any side is ooo, mark it
+            ooo = ooo_right or ooo_left
+            if ooo:
+                # lg.debug(f"ooo  {par_src_id} {par_dst_id}")
+                if par_src_id not in self.fixed_src_par_ids:
+                    self.curr_fix_src_par_id = par_src_id
+                    self.curr_fix_dst_par_id = par_dst_id
+                    return
+            # self.is_ooo_par_flat.append(ooo)
 
-            # check for missing data
-            if par_dst_id == -1:
-                self.curr_fix_src_par_id = par_src_id
-                self.curr_fix_dst_par_id = last_dst_id
-                return
-
-            # check for unsorted dst paragraphs
-            if par_dst_id < last_dst_id:
-                print("OOO paragraphs")
-                self.curr_fix_src_par_id = last_src_id
-                self.curr_fix_dst_par_id = last_dst_id
-                return
-
-            # update data
-            last_src_id = par_src_id
-            last_dst_id = par_dst_id
+        # last_src_id = 0
+        # last_dst_id = 0
+        # for par_src_id, par_dst_id in self.better_par_src_to_dst_flat.items():
+        #     lg.debug(f"{par_src_id} {par_dst_id}")
+        #     # if we already manually aligned this paragraph, skip it
+        #     if par_src_id in self.fixed_src_par_ids:
+        #         continue
+        #     # check for missing data
+        #     if par_dst_id == -1:
+        #         self.curr_fix_src_par_id = par_src_id
+        #         self.curr_fix_dst_par_id = last_dst_id
+        #         return
+        #     # check for unsorted dst paragraphs
+        #     if par_dst_id < last_dst_id:
+        #         lg.debug("OOO paragraphs")
+        #         self.curr_fix_src_par_id = last_src_id
+        #         self.curr_fix_dst_par_id = last_dst_id
+        #         return
+        #     # update data
+        #     last_src_id = par_src_id
+        #     last_dst_id = par_dst_id
 
     def find_next_valid_ooo(self):
         """Find the first ooo src id that has not been fixed yet."""
@@ -474,6 +505,7 @@ class Aligner:
         """Write the current alignment state."""
         align_info = {
             "all_ids_dst_max": self.all_ids_dst_max,
+            "better_par_src_to_dst_flat": self.better_par_src_to_dst_flat,
         }
         self.match_info_path["align"].write_text(json.dumps(align_info, indent=4))
 
@@ -489,6 +521,17 @@ class Aligner:
         self.compute_ooo_ids()
         # find the next src id to fix
         self.find_next_valid_ooo()
+
+    def pick_dst_par(self, id_dst_correct: int) -> None:
+        """Pick which dst par is the right one for the currently selected src."""
+        # save the correct dst id
+        self.better_par_src_to_dst_flat[self.curr_fix_src_par_id] = id_dst_correct
+        # save the intermediate result
+        self.save_align_state()
+        # mark this src id as fixed manually
+        self.fixed_src_par_ids.append(self.curr_fix_src_par_id)
+        # find the next src id to fix
+        self.find_next_par_to_fix()
 
     def scroll_sent(self, which_sents, direction) -> None:
         """Scroll the right bunch of sentences in the right direction."""
