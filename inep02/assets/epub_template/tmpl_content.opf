@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="uuid_id" version="2.0">
+    <metadata xmlns:calibre="http://calibre.kovidgoyal.net/2009/metadata" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:opf="http://www.idpf.org/2007/opf" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <dc:publisher>Auto Combiner by Pitrified</dc:publisher>
+        <dc:language>{lang_alpha2_tag}</dc:language>
+        <dc:creator opf:file-as="{author_file_as}" opf:role="aut">{author}</dc:creator>
+        <dc:title>{title}</dc:title>
+    </metadata>
+    <manifest>
+{all_manifest}        <item href="page_styles.css" id="page_css" media-type="text/css" />
+        <item href="stylesheet.css" id="css" media-type="text/css" />
+        <item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml" />
+    </manifest>
+    <spine toc="ncx">
+{all_spine}    </spine>
+    <guide />
+</package>

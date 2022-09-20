@@ -1,0 +1,6 @@
+        <navPoint id="{navpoint_id}" playOrder="{play_order}">
+            <navLabel>
+                <text>{chapter_title}</text>
+            </navLabel>
+            <content src="{path_src}" />
+        </navPoint>
