@@ -113,7 +113,7 @@ def align():
 
         elif "dst_pick" in args_data:
             dst_pick = int(args_data["dst_pick"])
-            ii.pick_dst_sent(dst_pick)
+            ii.pick_dst_par(dst_pick)
 
         elif "chap_move" in args_data:
             chap_move = args_data["chap_move"]

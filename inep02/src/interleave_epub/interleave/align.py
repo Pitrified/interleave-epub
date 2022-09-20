@@ -433,6 +433,7 @@ class Aligner:
     def find_next_par_to_fix(self):
         """Find the first ooo src id that has not been fixed yet."""
         # self.is_ooo_par_flat = []
+        self.last_par_dst_id = 0
         for par_src_id, par_dst_id in self.better_par_src_to_dst_flat.items():
             # lg.debug(f"flat {par_src_id} {par_dst_id}")
             # check to the left if you can
@@ -452,8 +453,17 @@ class Aligner:
                 if par_src_id not in self.fixed_src_par_ids:
                     self.curr_fix_src_par_id = par_src_id
                     self.curr_fix_dst_par_id = par_dst_id
+                    # last_par_dst_id is magically the *previous* dst id
+                    # and we'll use it to center the dst paragraph list
+                    # as the current one might very well be wrong ooo one
                     return
+            self.last_par_dst_id = par_dst_id
             # self.is_ooo_par_flat.append(ooo)
+
+        # if no ooo was found, set all to 0
+        self.curr_fix_src_par_id = 0
+        self.curr_fix_dst_par_id = 0
+        self.last_par_dst_id = 0
 
         # last_src_id = 0
         # last_dst_id = 0

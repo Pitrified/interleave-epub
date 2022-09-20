@@ -52,3 +52,7 @@ class Paragraph:
             s += f"\n{so}"
             s += f"\n{st}"
         return s
+
+    def get_text(self) -> str:
+        """Get the text content of the paragraph."""
+        return self.par_str

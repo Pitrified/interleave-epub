@@ -320,9 +320,9 @@ class InterleaverInteractive:
     def select_src_sent(self) -> None:
         """Select a new src sent to align."""
 
-    def pick_dst_sent(self, id_dst_correct: int) -> None:
-        """Pick which dst sent is the right one for the currently selected src."""
-        self.aligners[self.ch_id_pair_str].pick_dst_sent(id_dst_correct)
+    def pick_dst_par(self, id_dst_correct: int) -> None:
+        """Pick which dst par is the right one for the currently selected src."""
+        self.aligners[self.ch_id_pair_str].pick_dst_par(id_dst_correct)
 
     def scroll_sent(self, which_sents, direction) -> None:
         """Scroll the right bunch of sentences in the right direction."""
