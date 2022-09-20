@@ -10,6 +10,7 @@ from transformers.pipelines.text2text_generation import TranslationPipeline
 
 from interleave_epub.epub.epub import EPub
 from interleave_epub.interleave.align import Aligner
+from interleave_epub.interleave.build_chap import interleave_chap
 from interleave_epub.interleave.constants import (
     hug_model_name_tmpl,
     hug_trad_cache_fol,
@@ -328,4 +329,10 @@ class InterleaverInteractive:
         """Scroll the right bunch of sentences in the right direction."""
 
     def save_epub(self) -> None:
-        """Build the interleaved epub."""
+        """Build the interleaved epub.
+        """
+        # build the interleaved chaps
+        for ch_build_id in range(10):
+            interleave_chap()
+
+        # build the ep
