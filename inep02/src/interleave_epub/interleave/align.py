@@ -65,6 +65,8 @@ class Aligner:
             and self.match_info_path["sim"].exists()
         )
 
+        # TODO some checks on consistency of cached alignment info
+
         # compute the alignment even if we have a cached version,
         # we want all the other class variables to be set
 
@@ -110,6 +112,8 @@ class Aligner:
         # src ids we have set manually, to be skipped when searching for ooo ids
         self.fixed_src_par_ids: list[int] = []
         self.find_next_par_to_fix()
+
+        self.done_aligning = False
 
         # # set up the interactive parts of the Aligner
         # # src ids we have set manually, to be skipped when searching for ooo ids
@@ -461,9 +465,11 @@ class Aligner:
             # self.is_ooo_par_flat.append(ooo)
 
         # if no ooo was found, set all to 0
+        lg.debug("Done aligning.")
         self.curr_fix_src_par_id = 0
         self.curr_fix_dst_par_id = 0
         self.last_par_dst_id = 0
+        self.done_aligning = True
 
         # last_src_id = 0
         # last_dst_id = 0

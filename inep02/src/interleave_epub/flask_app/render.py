@@ -102,6 +102,7 @@ def render_align(ii: InterleaverInteractive):
         ch_first_id=ii.ch_first_id,
         ch_delta_id=ii.ch_delta_id,
         guess_id_dst_for_viz_id_src=guess_id_dst_for_viz_id_src,
+        done_aligning=al.done_aligning,
         sim_fig_str=sim_fig_str,
         align_fig_str=align_fig_str,
     )

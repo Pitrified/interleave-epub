@@ -12,8 +12,8 @@
     </div>
 
     <!-- navigate buttons -->
-    <div>
-        <div>
+    <div class="mb-3">
+        <div class="mb-3">
             Src:
             <a class="btn btn-info" href="{{ url_for('align', src_move='back') }}">
                 Back
@@ -50,7 +50,7 @@
                 Forward
             </a>
         </div>
-        <div>
+        <div class="mb-3">
             <a class="btn btn-info" href="{{ url_for('align', ignore_cached_match=True) }}">
                 Ignore cached match
             </a>
@@ -63,6 +63,9 @@
             <a class="btn btn-info" href="{{ url_for('load_ep') }}">
                 Load
             </a>
+            {% if done_aligning %}
+            <p>Done!</p>
+            {% else %}{% endif %}
         </div>
     </div>
 
@@ -90,17 +93,17 @@
                             {{ info.viz_id_src_show }}
                         </a>
                     </td>
-                    <td{% if is_highlighted_src %} class="table-primary" {% else %}{% endif %}
-                        style="width: 410px; word-wrap: break-word; text-align: justify;">
-                        <p{% if is_highlighted_src %} class="lead" {% else %}{% endif %}>
+                    <td {% if is_highlighted_src %} class="table-primary" {% else %}{% endif %}
+                        style="width: 600px; word-wrap: break-word; text-align: justify;">
+                        <p {% if is_highlighted_src %} class="lead" {% else %}{% endif %}>
                             {{ info.par_src_text }}
                         </p>
                     </td>
-                    <td{% if is_highlighted_dst %} class="table-secondary" {% else %}{% endif %}
-                        style="width: 410px; word-wrap: break-word; text-align: justify;">
+                    <td {% if is_highlighted_dst %} class="table-secondary" {% else %}{% endif %}
+                        style="width: 600px; word-wrap: break-word; text-align: justify;">
                         <!-- <a class="btn" style="text-align: justify;" href="{{ url_for('align', dst_pick=info.viz_id_dst_show) }}"> -->
                         <!-- <a style="text-align: justify;" href="{{ url_for('align', dst_pick=info.viz_id_dst_show) }}"> -->
-                        <p{% if is_highlighted_dst %} class="lead"{% else %}{% endif %}>
+                        <p {% if is_highlighted_dst %} class="lead" {% else %}{% endif %}>
                             {{ info.par_dst_text }}
                         </p>
                         <!-- </a> -->

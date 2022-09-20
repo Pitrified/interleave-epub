@@ -123,4 +123,10 @@ def align():
             delta_move = args_data["delta_move"]
             ii.change_chapter_delta(delta_move)
 
+        elif "ignore_cached_match" in args_data:
+            ii.align_auto(force_align=True)
+
+        elif "save_epub" in args_data:
+            ii.save_epub()
+
     return render_align(ii)
