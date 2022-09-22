@@ -30,9 +30,11 @@ There could be cover/preface chapter at the beginning,
 that match the number regex.
 
 `->`
+A pop up to set first and chap nums as a form in `/load`.
+
+`->`
 Show the chapter names and the first few paragraphs,
 and let the user pick the first.
-
 
 ## Sentences
 
