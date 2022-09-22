@@ -1,5 +1,17 @@
 # TODOs and IDEAs
 
+## Better access to paragraphs
+
+Should have `num_par`, `num_chap` as attributes of `Paragraph` and `Chapter`.
+
+Use `Epub.get_par(ch_id, par_id, which_trad)` and `Chapter.get_par(par_id, which_trad)`
+to access paragraph.
+
+## Batched translations
+
+Defer the translations inside `TradPipelineCache`
+and only do them when a `get_par('trad')` is called.
+
 ## Chapters in the book
 
 ### Order of the chapters
