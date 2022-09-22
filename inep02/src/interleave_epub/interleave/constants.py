@@ -37,3 +37,8 @@ lt_options = [
 ]
 lt_src_default = "fr"
 lt_dst_default = "en"
+
+
+################################################################################
+# default values for the books
+output_cache_fol = Path("~/interleave_my_epubs").expanduser()

@@ -1,11 +1,12 @@
 """Utility functions for the whole package."""
 
-
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
 
 from loguru import logger as lg
+
+from interleave_epub.interleave.constants import output_cache_fol
 
 src_or_dst = Literal["src", "dst"]
 orig_or_trad = Literal["orig", "trad"]
@@ -16,6 +17,7 @@ def get_package_fol(
         "root",
         "align_cache",
         "epub_template",
+        "output_cache_fol",
     ]
 ) -> Path:
     """Get the requested folder."""
@@ -30,6 +32,9 @@ def get_package_fol(
         return root_fol / "align_cache"
     elif which_fol == "epub_template":
         return root_fol / "assets" / "epub_template"
+    elif which_fol == "output_cache_fol":
+        # I'm not 100% sure that this folder should be in *interleave*.constants
+        return output_cache_fol
 
 
 def validate_index(
@@ -61,7 +66,7 @@ def is_index_valid(
 
 def are_contiguos(it):
     """Return true if the unique elements are contiguos.
-    
+
     Elements should probably be int.
     """
     it = set(it)

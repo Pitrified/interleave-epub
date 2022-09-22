@@ -1,7 +1,6 @@
 """Build an interleaved chapter given a paragraph matching."""
 
 import json
-from os import chdir
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -52,16 +51,17 @@ def interleave_chap(
     for par_src_id, par_dst_id in par_src_to_dst_flat.items():
         if par_dst_id > last_dst_par_id:
             for new_dst_par_id in range(last_dst_par_id + 1, par_dst_id):
-                lg.debug(f"add     dst par {new_dst_par_id}")
+                # lg.debug(f"add     dst par {new_dst_par_id}")
                 composed_ch_htext += f"{ch_dst.paragraphs[new_dst_par_id].p_tag}\n"
                 last_dst_par_id = new_dst_par_id
-        lg.debug(f"add src     par {par_src_id}")
+        # lg.debug(f"add src     par {par_src_id}")
         composed_ch_htext += f"{ch_src.paragraphs[par_src_id].p_tag}\n"
 
     # add all the still missing dst par
     dst_par_num = len(ch_dst.paragraphs)
     for new_dst_par_id in range(last_dst_par_id + 1, dst_par_num):
-        lg.debug(f"add     dst par {new_dst_par_id}")
+        # lg.debug(f"add     dst par {new_dst_par_id}")
+        composed_ch_htext += f"{ch_dst.paragraphs[new_dst_par_id].p_tag}\n"
 
     # build a vague chapter title
     chapter_title = f"Chapter {ch_viz_id}"
@@ -81,6 +81,7 @@ def interleave_chap(
 
     # where to save the chapter
     composed_ch_path = output_fol / f"ch_{ch_viz_id:04d}.xhtml"
+    lg.debug(f"Saving in {composed_ch_path}")
 
     # build a soup for the chapter content
     parsed_text = BeautifulSoup(full_ch_text, features="html.parser")

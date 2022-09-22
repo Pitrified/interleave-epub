@@ -9,6 +9,7 @@ from transformers.pipelines import pipeline
 from transformers.pipelines.text2text_generation import TranslationPipeline
 
 from interleave_epub.epub.epub import EPub
+from interleave_epub.epub.epub_builder import EpubBuilder
 from interleave_epub.interleave.align import Aligner
 from interleave_epub.interleave.build_chap import interleave_chap
 from interleave_epub.interleave.constants import (
@@ -175,15 +176,24 @@ class InterleaverInteractive:
 
         If it exists, do NOT overwrite that: we might have already aligned some chapters.
         """
-        # base cache folder for all alignment
-        cache_fol = get_package_fol(which_fol="align_cache")
-
-        # create a folder for this pair of books, removing spaces
+        # create a name for this pair of books, removing spaces
         pair_name = "_".join([f"{s.epub_name[:20]}" for s in self.epubs.values()])
         pair_name = "".join(pair_name.split())
+
+        # base cache folder for all alignment
+        cache_fol = get_package_fol(which_fol="align_cache")
+        # folder for this book alignment info
         self.align_cache_fol = cache_fol / pair_name
         if not self.align_cache_fol.exists():
             self.align_cache_fol.mkdir(parents=True)
+
+        # base output folder for all books
+        # TODO frankly don't know why it should be different from align_cache
+        output_fol_root = get_package_fol("output_cache_fol")
+        self.output_fol =  output_fol_root / pair_name
+        if not self.output_fol.exists():
+            self.output_fol.mkdir(parents=True)
+
 
     def align_auto(self, force_align: bool = False) -> None:
         """Compute the similarity and hopeful alignment.
@@ -329,10 +339,51 @@ class InterleaverInteractive:
         """Scroll the right bunch of sentences in the right direction."""
 
     def save_epub(self) -> None:
-        """Build the interleaved epub.
-        """
+        """Build the interleaved epub."""
         # build the interleaved chaps
-        for ch_build_id in range(10):
-            interleave_chap()
+        # TODO this should be an attribute of the book
+        ch_tot_num = len(self.epubs["src"].chapters)
+        ep_tmpl_fol = get_package_fol("epub_template")
+
+        # TODO se this via form in the /load route
+        book_title = "The Title"
+        book_author = "The Author"
+        lt_pair_h = self.lts_ph[0]
+        lang_alpha2_tag = self.sd_to_lt['src']
+
+        for ch_build_id in range(ch_tot_num):
+
+            # the current chapters to align
+            ch_id_src = self.ch_first_id + ch_build_id
+            ch_src = self.epubs["src"].chapters[ch_id_src]
+            ch_id_dst = ch_id_src + self.ch_delta_id
+            ch_dst = self.epubs["dst"].chapters[ch_id_dst]
+
+            # the matching file
+            ch_id_pair_str = f"{ch_id_src}_{ch_id_dst}"
+            align_info_name = f"info_align_{ch_id_pair_str}.json"
+            par_matching_path = self.align_cache_fol / align_info_name
+
+            interleave_chap(
+                ch_src=ch_src,
+                ch_dst=ch_dst,
+                ch_viz_id=ch_build_id + 1,
+                par_matching_path=par_matching_path,
+                output_fol=self.output_fol,
+                ep_tmpl_fol=ep_tmpl_fol,
+                book_title=book_title,
+                book_author=book_author,
+                lt_pair_h=lt_pair_h,
+            )
 
         # build the ep
+        eb = EpubBuilder(
+            composed_folder=self.output_fol,
+            template_epub_folder=ep_tmpl_fol,
+            epub_out_folder=self.output_fol,
+            tot_chapter_num=ch_tot_num,
+            author_name_full=book_author,
+            book_name_full=book_title,
+            lang_alpha2_tag=lang_alpha2_tag,
+        )
+        eb.do_build()
