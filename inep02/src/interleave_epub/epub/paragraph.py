@@ -1,6 +1,7 @@
 """Paragraph class."""
 
 from bs4 import Tag
+from loguru import logger as lg
 from spacy.language import Language
 from spacy.tokens import Doc, Span
 
@@ -28,10 +29,26 @@ class Paragraph:
 
         # MAYBE: move to method that does clean up well
         # TODO: can you use Tag.text ?
-        self.par_str = str(self.p_tag.string)  # we want a str, not a NavigableString
-        self.par_str = self.par_str.replace("\n\r", " ")
-        self.par_str = self.par_str.replace("\n", " ")
-        self.par_str = self.par_str.replace("\r", " ")
+        # ptag_str = self.p_tag.string
+        ptag_str = self.p_tag.text
+        # lg.debug(f"ptag_str: ({type(ptag_str)}) >{ptag_str}<")
+        if ptag_str is None:
+            self.par_str = ""
+        else:
+            self.par_str = str(ptag_str)  # we want a str, not a NavigableString
+            # TODO is Tag.text already a string?
+            self.par_str = self.par_str.replace("\n\r", " ")
+            self.par_str = self.par_str.replace("\n", " ")
+            self.par_str = self.par_str.replace("\r", " ")
+
+        # lg.debug(f"paragraph: >{self.par_str}<")
+        # decide if the paragraph is empty
+        min_par_len = 0
+        if len(self.par_str) <= min_par_len:
+            self.is_empty = True
+            # an empty paragraph cannot be translated
+            return
+        self.is_empty = False
 
         # TODO: improve sentence split
         self.par_doc = self.nlp[self.lang["orig"]](self.par_str)

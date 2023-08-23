@@ -2,6 +2,7 @@
 from typing import Literal, get_args
 
 from bs4 import BeautifulSoup
+from loguru import logger as lg
 from spacy.language import Language
 from spacy.tokens import Doc, Span
 
@@ -14,6 +15,8 @@ class Chapter:
     """Chapter class.
 
     Parse the chapter content to find the Paragraphs in <p> tags.
+
+    TODO: add a method to find the chapter title in a header
     """
 
     def __init__(
@@ -35,13 +38,15 @@ class Chapter:
         self.soup = BeautifulSoup(chap_content, features="html.parser")
         self.body = self.soup.body
         if self.body is None:
-            print(f"No body found in chapter {self.chap_file_name} of book {'book'}.")
+            lg.warning(
+                f"No body found in chapter {self.chap_file_name} of book {'book'}."
+            )
             return
 
         # find the paragraphs
         self.all_p_tag = self.body.find_all("p")
         if len(self.all_p_tag) == 0:
-            print(
+            lg.warning(
                 f"No paragraphs found in chapter {self.chap_file_name} of book {'book'}."
             )
             return
@@ -50,14 +55,17 @@ class Chapter:
         # self.paragraphs = [Paragraph(p_tag, self.nlp) for p_tag in self.all_p_tag]
         self.paragraphs: list[Paragraph] = []
         for p_tag in self.all_p_tag[:]:
-            self.paragraphs.append(
-                Paragraph(
-                    p_tag,
-                    self.lang,
-                    self.nlp,
-                    self.pipe,
-                )
+            # lg.trace(f"adding paragraph {p_tag}")
+            new_par = Paragraph(
+                p_tag,
+                self.lang,
+                self.nlp,
+                self.pipe,
             )
+            if new_par.is_empty:
+                lg.warning(f"Skipping empty paragraph {p_tag}")
+                continue
+            self.paragraphs.append(new_par)
 
         self.build_flat_sents()
         self.build_index()
