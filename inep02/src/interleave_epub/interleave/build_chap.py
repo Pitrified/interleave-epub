@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from loguru import logger as lg
 
 from interleave_epub.epub.chapter import Chapter
+from interleave_epub.epub.utils import tag_add_attr_multi_valued
 
 
 def interleave_chap(
@@ -19,6 +20,8 @@ def interleave_chap(
     book_title: str,
     book_author: str,
     lt_pair_h: str,
+    lang_alpha2_tag_src: str,
+    lang_alpha2_tag_dst: str,
 ):
     """Build an interleaved chapter given a paragraph matching.
 
@@ -47,21 +50,34 @@ def interleave_chap(
     last_dst_par_id = -1
     composed_ch_htext = ""
 
+    # classes for the languages
+    lang_alpha2_class_src = f"lang-{lang_alpha2_tag_src}"
+    lang_alpha2_class_dst = f"lang-{lang_alpha2_tag_dst}"
+
     # add the chapters using the matching
     for par_src_id, par_dst_id in par_src_to_dst_flat.items():
         if par_dst_id > last_dst_par_id:
             for new_dst_par_id in range(last_dst_par_id + 1, par_dst_id):
                 # lg.debug(f"add     dst par {new_dst_par_id}")
-                composed_ch_htext += f"{ch_dst.paragraphs[new_dst_par_id].p_tag}\n"
+                dst_tag = ch_dst.paragraphs[new_dst_par_id].p_tag
+                tag_add_attr_multi_valued(dst_tag, "class", lang_alpha2_class_dst)
+                # lg.trace(f"add tag >{dst_tag}<")
+                composed_ch_htext += f"{dst_tag}\n"
                 last_dst_par_id = new_dst_par_id
         # lg.debug(f"add src     par {par_src_id}")
-        composed_ch_htext += f"{ch_src.paragraphs[par_src_id].p_tag}\n"
+        src_tag = ch_src.paragraphs[par_src_id].p_tag
+        tag_add_attr_multi_valued(src_tag, "class", lang_alpha2_class_src)
+        # lg.trace(f"add tag >{src_tag}<")
+        composed_ch_htext += f"{src_tag}\n"
 
     # add all the still missing dst par
     dst_par_num = len(ch_dst.paragraphs)
     for new_dst_par_id in range(last_dst_par_id + 1, dst_par_num):
         # lg.debug(f"add     dst par {new_dst_par_id}")
-        composed_ch_htext += f"{ch_dst.paragraphs[new_dst_par_id].p_tag}\n"
+        dst_tag = ch_dst.paragraphs[new_dst_par_id].p_tag
+        tag_add_attr_multi_valued(dst_tag, "class", lang_alpha2_class_dst)
+        # lg.trace(f"add tag >{dst_tag}<")
+        composed_ch_htext += f"{dst_tag}\n"
 
     # build a vague chapter title
     chapter_title = f"Chapter {ch_viz_id}"

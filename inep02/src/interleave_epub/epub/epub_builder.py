@@ -19,6 +19,16 @@ class EpubBuilder:
     ) -> None:
         """Initialize the epub builder.
 
+        TODO: need to add
+
+        .. css
+
+            .lang-en {
+                font-style: italic;
+            }
+
+        at the end of ``stylesheet.css``.
+
         Args:
             composed_folder (Path): Folder with the chapter xhtml files.
             template_epub_folder (Path): Folder with the epub template files.
@@ -27,7 +37,7 @@ class EpubBuilder:
             author_name_full (str): Author name.
             book_name_full (str): Book name.
             lang_alpha2_tag (str): _description_
-        """    
+        """
         self._composed_folder = composed_folder
         self._tmpl_folder = template_epub_folder
         self.epub_out_folder = epub_out_folder
