@@ -6,6 +6,7 @@ import re
 from typing import IO, Union
 import zipfile
 
+from loguru import logger as lg
 from spacy.language import Language
 from tqdm import tqdm
 
@@ -21,6 +22,7 @@ class EPub:
         self,
         zipped_file: Union[str, IO[bytes], Path],
         epub_name: str,
+        epub_author: str,
         lang_orig: str,
         lang_trad: str,
         nlp: dict[str, Language],
@@ -33,7 +35,9 @@ class EPub:
         self.input_zip = zipfile.ZipFile(self.zipped_file)
 
         # save misc info
+        # TODO epub name is the file name, we also need a pretty title
         self.epub_name = epub_name
+        self.epub_author = epub_author
         self.lang = {
             "orig": lang_orig,
             "trad": lang_trad,
@@ -46,6 +50,16 @@ class EPub:
         # analyze the contents and find the chapter file names
         self.zipped_file_paths = [Path(p) for p in self.input_zip.namelist()]
         self.find_text_chapters()
+
+        # # TODO if find_text_chapters fails we need a better fallback
+        # lg.info(f"Found {len(self.chap_file_names)} chapters.")
+        # lg.debug(f"\n{self.chap_file_names}")
+        # cheat_chap_list = []
+        # # might want to sort that as well
+        # self.chap_file_names = [
+        #     cn for cn in self.chap_file_names if cn in cheat_chap_list
+        # ]
+        # lg.debug(f"cheat\n{self.chap_file_names}")
 
         # build a dict of chapters
         self.chapters: dict[int, Chapter] = {}
