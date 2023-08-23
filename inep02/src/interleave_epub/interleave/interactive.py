@@ -14,6 +14,7 @@ from interleave_epub.interleave.align import Aligner
 from interleave_epub.interleave.build_chap import interleave_chap
 from interleave_epub.interleave.constants import (
     hug_model_name_tmpl,
+    hug_model_names,
     hug_trad_cache_fol,
     hug_trad_file_tmpl,
     sent_model_names,
@@ -91,15 +92,18 @@ class InterleaverInteractive:
         # MAYBE this should be settable?
         # definitely not hardcoded with a language tag lol
         load_pipe = {
-            "fr-en": False,
-            "en-fr": False,
+            # "fr-en": True,
+            # "en-fr": True,
+            self.lts_ph[0]: True,
+            self.lts_ph[1]: False,
         }
 
         # load the huggingface pipelines
         self.pipe = {
             lth: cast(
                 TranslationPipeline,
-                pipeline("translation", model=hug_model_name_tmpl.format(lth)),
+                # pipeline("translation", model=hug_model_name_tmpl.format(lth)),
+                pipeline("translation", model=hug_model_names[lth]),
             )
             if load_pipe[lth]
             else None
@@ -140,6 +144,7 @@ class InterleaverInteractive:
         ep_path: str | IO[bytes] | Path,
         which_ep: src_or_dst,
         ep_name: str = "",
+        ep_author: str = "",
     ) -> None:
         """Add a book to the interleaver.
 
@@ -162,6 +167,7 @@ class InterleaverInteractive:
         self.epubs[which_ep] = EPub(
             ep_path,
             ep_name,
+            ep_author,
             lt_orig,
             lt_trad,
             self.nlp,
@@ -190,10 +196,9 @@ class InterleaverInteractive:
         # base output folder for all books
         # TODO frankly don't know why it should be different from align_cache
         output_fol_root = get_package_fol("output_cache_fol")
-        self.output_fol =  output_fol_root / pair_name
+        self.output_fol = output_fol_root / pair_name
         if not self.output_fol.exists():
             self.output_fol.mkdir(parents=True)
-
 
     def align_auto(self, force_align: bool = False) -> None:
         """Compute the similarity and hopeful alignment.
@@ -346,10 +351,14 @@ class InterleaverInteractive:
         ep_tmpl_fol = get_package_fol("epub_template")
 
         # TODO se this via form in the /load route
-        book_title = "The Title"
-        book_author = "The Author"
+        title_src = self.epubs["src"].epub_name
+        title_dst = self.epubs["dst"].epub_name
+        author = self.epubs["src"].epub_author
+        book_title = f"{title_src} ({title_dst})"
+        book_author = f"{author}"
         lt_pair_h = self.lts_ph[0]
-        lang_alpha2_tag = self.sd_to_lt['src']
+        lang_alpha2_tag_src = self.sd_to_lt["src"]
+        lang_alpha2_tag_dst = self.sd_to_lt["dst"]
 
         for ch_build_id in range(ch_tot_num):
 
@@ -374,9 +383,12 @@ class InterleaverInteractive:
                 book_title=book_title,
                 book_author=book_author,
                 lt_pair_h=lt_pair_h,
+                lang_alpha2_tag_src=lang_alpha2_tag_src,
+                lang_alpha2_tag_dst=lang_alpha2_tag_dst,
             )
 
         # build the ep
+        # MAYBE here we pass the src language tag
         eb = EpubBuilder(
             composed_folder=self.output_fol,
             template_epub_folder=ep_tmpl_fol,
@@ -384,6 +396,6 @@ class InterleaverInteractive:
             tot_chapter_num=ch_tot_num,
             author_name_full=book_author,
             book_name_full=book_title,
-            lang_alpha2_tag=lang_alpha2_tag,
+            lang_alpha2_tag=lang_alpha2_tag_src,
         )
         eb.do_build()

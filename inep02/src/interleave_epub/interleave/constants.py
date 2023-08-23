@@ -11,6 +11,7 @@ spa_model_names = {
     # "fr": "fr_core_news_md",
     "en": "en_core_web_sm",
     "fr": "fr_core_news_sm",
+    "br": "pt_core_news_sm",
 }
 spa_model_cache_fol = Path("~/.cache/spacy_my_models").expanduser()
 
@@ -20,6 +21,12 @@ hug_model_name_tmpl = "Helsinki-NLP/opus-mt-{}"
 # hug_model_names = {
 #     lt_pair: f"Helsinki-NLP/opus-mt-{lt_pair}" for lt_pair in lts_pair_h
 # }
+hug_model_names = {
+    "en-fr": f"Helsinki-NLP/opus-mt-en-fr",
+    "fr-en": f"Helsinki-NLP/opus-mt-fr-en",
+    "br-en": f"Helsinki-NLP/opus-mt-ROMANCE-en",
+    "en-br": f"Helsinki-NLP/opus-mt-en-ROMANCE",
+}
 
 # sentence transformer model names
 sent_model_names = {
@@ -34,8 +41,9 @@ lt_options = [
     {"tag": "auto", "name": "Auto detect"},
     {"tag": "en", "name": "English"},
     {"tag": "fr", "name": "French"},
+    {"tag": "br", "name": "Brazilian"},
 ]
-lt_src_default = "fr"
+lt_src_default = "br"
 lt_dst_default = "en"
 
 

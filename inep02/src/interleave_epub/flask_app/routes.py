@@ -22,13 +22,14 @@ def learn01():
     """Render the learn 01 page, to learn the first thing."""
     # parse POST request
     if request.method == "POST":
-        print(f"{request=}")
-        print(f"{request.form=}")
-        print(f"{request.files=}")
+        lg.debug(f"{request=}")
+        lg.debug(f"{request.form=}")
+        lg.debug(f"{request.files=}")
 
     lts_list = [
         {"tag": "en", "name": "English"},
         {"tag": "fr", "name": "French"},
+        {"tag": "br", "name": "Brazilian"},
     ]
     lt_src_default = "fr"
     lt_dst_default = "en"
@@ -46,12 +47,12 @@ def learn01():
 def load_ep():
     """Render the page to pick the languages and load the epubs."""
     # parse POST request
-    print(f"{request=}")
+    lg.debug(f"{request=}")
     if request.method == "POST":
         form_data = flatten_multidict(request.form)
-        print(f"{form_data=}")
+        lg.debug(f"{form_data=}")
         files_data = flatten_multidict(request.files)
-        print(f"{files_data=}")
+        lg.debug(f"{files_data=}")
 
         # parse the data
         file_name_src, file_io_src = permanentize_form_file(files_data["file_src"])
@@ -59,11 +60,19 @@ def load_ep():
         lt_src = form_data["lt_src"]
         lt_dst = form_data["lt_dst"]
 
+        # TODO should be set more seriously
+        file_author = ""
+
         # if some file is bad render the load page again
         if file_name_src == "" or file_name_dst == "":
             lg.warning(f"Empty filenames.")
+
             # we cheat for maximum laziness
-            epub_folder_path = Path("~").expanduser() / "snippet" / "datasets" / "ebook"
+
+            # gaston
+            epub_folder_path = (
+                Path("~").expanduser() / "repos" / "snippet" / "datasets" / "ebook"
+            )
             epub_paths = {
                 "fr": epub_folder_path
                 / "Gaston_Leroux_-_Le_Mystere_de_la_chambre_jaune.epub",
@@ -73,7 +82,26 @@ def load_ep():
             file_name_dst = "YellowRoom"
             file_io_src = epub_paths["fr"]
             file_io_dst = epub_paths["en"]
-            # return render_load()
+
+            # paulo
+            epub_folder_path = (
+                Path("~").expanduser() / "ephem" / "calibrelibrary" / "Paulo Coelho"
+            )
+            # ~/ephem/calibrelibrary/Paulo Coelho/The Alchemist - edit - short (6)/The Alchemist - edit - short - Paulo Coelho.epub
+            # ~/ephem/calibrelibrary/Paulo Coelho/O Alquimista - short (5)/O Alquimista - short - Paulo Coelho.epub
+            epub_paths = {
+                "br": epub_folder_path
+                / "O Alquimista - short (5)"
+                / "O Alquimista - short - Paulo Coelho.epub",
+                "en": epub_folder_path
+                / "The Alchemist - edit - short (6)"
+                / "The Alchemist - edit - short - Paulo Coelho.epub",
+            }
+            file_name_src = "O Alquimistas"
+            file_name_dst = "The Alchemist"
+            file_author = "Paulo Coelho"
+            file_io_src = epub_paths["br"]
+            file_io_dst = epub_paths["en"]
 
         # set the lang tags
         ii.set_lang_tag(lt_src, "src")
@@ -83,10 +111,11 @@ def load_ep():
         ii.load_nlp()
 
         # load the books
-        ii.add_book(file_io_src, "src", file_name_src)
-        ii.add_book(file_io_dst, "dst", file_name_dst)
+        ii.add_book(file_io_src, "src", file_name_src, file_author)
+        ii.add_book(file_io_dst, "dst", file_name_dst, file_author)
 
         # go forth and align
+        # TODO: some way to force the align with no cache
         return redirect(url_for("align", first_align=""))
 
     return render_load()
@@ -96,17 +125,17 @@ def load_ep():
 def align():
     """Align two epubs."""
     # parse POST request
-    print(f"{request=}")
+    lg.debug(f"{request=}")
     if request.method == "POST":
         form_data = flatten_multidict(request.form)
-        print(f"{form_data=}")
+        lg.debug(f"{form_data=}")
         files_data = flatten_multidict(request.files)
-        print(f"{files_data=}")
+        lg.debug(f"{files_data=}")
 
     # parse GET request
     elif request.method == "GET":
         args_data = flatten_multidict(request.args)
-        print(f"{args_data=}")
+        lg.debug(f"{args_data=}")
 
         if "first_align" in args_data:
             ii.align_auto()
