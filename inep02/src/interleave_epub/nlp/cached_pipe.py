@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from loguru import logger as lg
 from transformers.pipelines.text2text_generation import TranslationPipeline
 
 
@@ -40,7 +41,7 @@ class TranslationPipelineCache:
         if str_orig not in self.cached_tran:
 
             if self.pipe is None:
-                print(f"WARNING: no loaded pipeline and unknown sentence: {str_orig}")
+                lg.trace(f"no loaded pipeline and unknown sentence: {str_orig}")
                 return "UNKNOWN SENTENCE"
 
             str_tran = self.pipe(str_orig)
